@@ -38,7 +38,12 @@ describe("addMember", () => {
   it("rejects a name that is already taken, ignoring case", () => {
     const household = addMember(createHousehold("Flat"), "Lea");
 
-    expectErrorCode(() => addMember(household, " lea "), HouseholdErrorCode.DuplicateMember);
+    expect(() => addMember(household, " lea ")).toThrow(
+      expect.objectContaining({
+        code: HouseholdErrorCode.DuplicateMember,
+        message: "Lea is already a member.",
+      }),
+    );
   });
 
   it("rejects new members once the limit is reached", () => {

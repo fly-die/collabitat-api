@@ -40,11 +40,14 @@ export function addMember(household: Household, rawName: string): Household {
     );
   }
 
-  const isTaken = household.members.some(
+  const existingMember = household.members.find(
     (member) => member.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
   );
-  if (isTaken) {
-    throw new HouseholdError(HouseholdErrorCode.DuplicateMember, `${name} is already a member.`);
+  if (existingMember) {
+    throw new HouseholdError(
+      HouseholdErrorCode.DuplicateMember,
+      `${existingMember.name} is already a member.`,
+    );
   }
 
   return { ...household, members: [...household.members, { id: randomUUID(), name }] };
