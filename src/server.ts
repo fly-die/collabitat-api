@@ -1,8 +1,21 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { connectDatabase } from "./db/database.js";
+import { PostgresHouseholdRepository } from "./households/postgres-household-repository.js";
 
-const app = buildApp();
 const config = loadConfig();
+const database = config.databaseUrl ? await connectDatabase(config.databaseUrl) : undefined;
+
+const app = buildApp({
+  householdRepository: database ? new PostgresHouseholdRepository(database.database) : undefined,
+});
+
+if (!database) {
+  app.log.warn("DATABASE_URL is not set. Data is kept in memory and lost on restart.");
+}
+if (database) {
+  app.addHook("onClose", database.close);
+}
 
 try {
   await app.listen({ port: config.port, host: config.host });

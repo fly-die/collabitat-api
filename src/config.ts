@@ -5,5 +5,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   return {
     port: Number(env.PORT ?? DEFAULT_PORT),
     host: env.HOST ?? DEFAULT_HOST,
+    databaseUrl: env.DATABASE_URL,
   };
 }
