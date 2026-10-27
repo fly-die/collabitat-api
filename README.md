@@ -30,6 +30,18 @@ npm run dev
 
 The API listens on `http://localhost:3000`. Check it with `curl localhost:3000/health`.
 
+## Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `POST` | `/households` | Create a household (`{ "name": "..." }`) |
+| `GET` | `/households/:householdId` | Get a household with its members |
+| `POST` | `/households/:householdId/members` | Add a member (`{ "name": "..." }`) |
+| `DELETE` | `/households/:householdId/members/:memberId` | Remove a member |
+
+Data is kept in memory for now and resets on restart.
+
 ## Scripts
 
 | Command | Purpose |
