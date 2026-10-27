@@ -8,6 +8,7 @@ const database = config.databaseUrl ? await connectDatabase(config.databaseUrl) 
 
 const app = buildApp({
   householdRepository: database ? new PostgresHouseholdRepository(database.database) : undefined,
+  webOrigins: config.webOrigins,
 });
 
 if (!database) {
