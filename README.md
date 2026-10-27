@@ -15,18 +15,20 @@ Frontend: [collabitat-web](https://github.com/fly-die/collabitat-web)
 
 ## Run locally
 
-With Docker:
+With Docker (API and Postgres):
 
 ```sh
 docker compose up --build
 ```
 
-Without Docker (Node 24+):
+Without Docker (Node 24+), data is kept in memory:
 
 ```sh
 npm install
 npm run dev
 ```
+
+Set `DATABASE_URL` to use Postgres instead. Migrations run on startup.
 
 The API listens on `http://localhost:3000`. Check it with `curl localhost:3000/health`.
 
@@ -40,8 +42,6 @@ The API listens on `http://localhost:3000`. Check it with `curl localhost:3000/h
 | `POST` | `/households/:householdId/members` | Add a member (`{ "name": "..." }`) |
 | `DELETE` | `/households/:householdId/members/:memberId` | Remove a member |
 
-Data is kept in memory for now and resets on restart.
-
 ## Scripts
 
 | Command | Purpose |
@@ -54,7 +54,7 @@ Data is kept in memory for now and resets on restart.
 
 ## Stack
 
-Fastify, TypeScript, Vitest.
+Fastify, TypeScript, PostgreSQL, Drizzle, Vitest.
 
 ## License
 
