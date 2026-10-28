@@ -38,3 +38,33 @@ jobs:
       - name: SonarCloud scan
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v8
+
+  deploy:
+    if: github.event_name == 'push' && vars.API_DOMAIN != ''
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://${{ vars.API_DOMAIN }}/health
+    env:
+      API_DOMAIN: ${{ vars.API_DOMAIN }}
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      WEB_ORIGINS: ${{ vars.WEB_ORIGINS || 'https://fly-die.github.io' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Deploy
+        run: ssh "deploy@$DEPLOY_HOST" 'bash -s' -- "$GITHUB_SHA" "$API_DOMAIN" "$WEB_ORIGINS" < deploy/deploy.sh
+      - name: Check the live API
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors "https://$API_DOMAIN/health"
