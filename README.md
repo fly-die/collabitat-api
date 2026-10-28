@@ -32,6 +32,28 @@ Set `DATABASE_URL` to use Postgres instead. Migrations run on startup.
 
 The API listens on `http://localhost:3000`. Check it with `curl localhost:3000/health`.
 
+## Deploy
+
+Runs on any Ubuntu 24.04 server: Postgres, the API and [Caddy](https://caddyserver.com) for HTTPS, defined in `deploy/`.
+
+1. Prepare the server once, with the public half of a deploy key:
+
+   ```sh
+   ssh root@<host> 'bash -s' -- "$(cat deploy_key.pub)" < deploy/setup-server.sh
+   ```
+
+2. In the repository settings under Actions, set:
+
+   | Name | Kind | Value |
+   |---|---|---|
+   | `DEPLOY_SSH_KEY` | secret | Private half of the deploy key |
+   | `DEPLOY_HOST` | variable | Server address |
+   | `DEPLOY_KNOWN_HOSTS` | variable | Output of `ssh-keyscan <host>` |
+   | `API_DOMAIN` | variable | Domain pointing to the server, e.g. `203-0-113-7.sslip.io` |
+   | `WEB_ORIGINS` | variable | Optional, defaults to `https://fly-die.github.io` |
+
+Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the deploy job is skipped.
+
 ## Endpoints
 
 | Method | Path | Purpose |
