@@ -59,10 +59,15 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | Health check |
-| `POST` | `/households` | Create a household (`{ "name": "..." }`) |
-| `GET` | `/households/:householdId` | Get a household with its members |
-| `POST` | `/households/:householdId/members` | Add a member (`{ "name": "..." }`) |
-| `DELETE` | `/households/:householdId/members/:memberId` | Remove a member |
+| `POST` | `/households` | Create a household and join it (`{ "name": "...", "memberName": "..." }`) |
+| `GET` | `/invites/:inviteCode` | Household name and flatmates who have not joined yet |
+| `POST` | `/invites/:inviteCode/members` | Join under a new name (`{ "name": "..." }`) |
+| `POST` | `/invites/:inviteCode/members/:memberId/join` | Join as a flatmate someone already added |
+| `GET` | `/household` | Your household with its members |
+| `POST` | `/household/members` | Add a flatmate (`{ "name": "..." }`) |
+| `DELETE` | `/household/members/:memberId` | Remove a flatmate |
+
+Creating or joining returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
 ## Scripts
 
