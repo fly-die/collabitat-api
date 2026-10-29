@@ -1,15 +1,24 @@
 import type { Household } from "./household.js";
 
 export interface HouseholdRepository {
-  findById(id: string): Promise<Household | undefined>;
+  findByInviteCode(inviteCode: string): Promise<Household | undefined>;
+  findByMemberId(memberId: string): Promise<Household | undefined>;
   save(household: Household): Promise<void>;
 }
 
 export class InMemoryHouseholdRepository implements HouseholdRepository {
   private readonly householdsById = new Map<string, Household>();
 
-  async findById(id: string) {
-    return this.householdsById.get(id);
+  async findByInviteCode(inviteCode: string) {
+    return [...this.householdsById.values()].find(
+      (household) => household.inviteCode === inviteCode,
+    );
+  }
+
+  async findByMemberId(memberId: string) {
+    return [...this.householdsById.values()].find((household) =>
+      household.members.some((member) => member.id === memberId),
+    );
   }
 
   async save(household: Household) {

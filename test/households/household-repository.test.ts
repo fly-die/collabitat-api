@@ -3,20 +3,20 @@ import { addMember, createHousehold } from "../../src/households/household.js";
 import { InMemoryHouseholdRepository } from "../../src/households/household-repository.js";
 
 describe("InMemoryHouseholdRepository", () => {
-  it("returns undefined for an unknown id", async () => {
+  it("finds a saved household by invite code and by any of its members", async () => {
     const repository = new InMemoryHouseholdRepository();
+    const { household } = createHousehold("Flat", "Mia");
+    const withLea = addMember(household, "Lea");
+    await repository.save(withLea);
 
-    expect(await repository.findById("missing")).toBeUndefined();
+    expect(await repository.findByInviteCode(household.inviteCode)).toEqual(withLea);
+    expect(await repository.findByMemberId(withLea.members[1].id)).toEqual(withLea);
   });
 
-  it("stores a household and replaces it on the next save", async () => {
+  it("returns undefined for unknown codes and members", async () => {
     const repository = new InMemoryHouseholdRepository();
-    const household = createHousehold("Flat");
 
-    await repository.save(household);
-    await repository.save(addMember(household, "Lea"));
-
-    const stored = await repository.findById(household.id);
-    expect(stored?.members.map((member) => member.name)).toEqual(["Lea"]);
+    expect(await repository.findByInviteCode("missing")).toBeUndefined();
+    expect(await repository.findByMemberId("missing")).toBeUndefined();
   });
 });

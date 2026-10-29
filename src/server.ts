@@ -2,12 +2,14 @@ import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { connectDatabase } from "./db/database.js";
 import { PostgresHouseholdRepository } from "./households/postgres-household-repository.js";
+import { PostgresSessionRepository } from "./sessions/postgres-session-repository.js";
 
 const config = loadConfig();
 const database = config.databaseUrl ? await connectDatabase(config.databaseUrl) : undefined;
 
 const app = buildApp({
   householdRepository: database ? new PostgresHouseholdRepository(database.database) : undefined,
+  sessionRepository: database ? new PostgresSessionRepository(database.database) : undefined,
   webOrigins: config.webOrigins,
 });
 
