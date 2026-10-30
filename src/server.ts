@@ -1,6 +1,7 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { connectDatabase } from "./db/database.js";
+import { PostgresAccountRepository } from "./accounts/postgres-account-repository.js";
 import { PostgresExpenseRepository } from "./expenses/postgres-expense-repository.js";
 import { PostgresHouseholdRepository } from "./households/postgres-household-repository.js";
 import { PostgresSessionRepository } from "./sessions/postgres-session-repository.js";
@@ -12,6 +13,7 @@ const app = buildApp({
   householdRepository: database ? new PostgresHouseholdRepository(database.database) : undefined,
   sessionRepository: database ? new PostgresSessionRepository(database.database) : undefined,
   expenseRepository: database ? new PostgresExpenseRepository(database.database) : undefined,
+  accountRepository: database ? new PostgresAccountRepository(database.database) : undefined,
   webOrigins: config.webOrigins,
 });
 

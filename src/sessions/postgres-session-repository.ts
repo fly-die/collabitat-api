@@ -17,4 +17,8 @@ export class PostgresSessionRepository implements SessionRepository {
       .where(eq(sessions.tokenHash, tokenHash));
     return session?.memberId;
   }
+
+  async remove(tokenHash: string) {
+    await this.database.delete(sessions).where(eq(sessions.tokenHash, tokenHash));
+  }
 }

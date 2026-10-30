@@ -3,6 +3,7 @@ import { buildApp } from "../../src/app.js";
 import { ExpenseErrorCode } from "../../src/expenses/expense-errors.js";
 import { HouseholdErrorCode } from "../../src/households/household-errors.js";
 import { HttpStatus } from "../../src/http-status.js";
+import { newCredentials } from "../support/credentials.js";
 
 type App = ReturnType<typeof buildApp>;
 
@@ -24,7 +25,7 @@ async function householdWithLea(app: App) {
   const created = await app.inject({
     method: "POST",
     url: "/households",
-    payload: { name: "Langstrasse 12", memberName: "Mia" },
+    payload: { name: "Langstrasse 12", memberName: "Mia", ...newCredentials("mia") },
   });
   const { token } = created.json();
   const withLea = await app.inject({

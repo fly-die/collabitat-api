@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.js";
 import { HttpStatus } from "../../src/http-status.js";
 import { HouseholdErrorCode } from "../../src/households/household-errors.js";
+import { newCredentials } from "../support/credentials.js";
 
 type App = ReturnType<typeof buildApp>;
 
@@ -24,7 +25,7 @@ async function createHousehold(app: App): Promise<Session> {
   const response = await app.inject({
     method: "POST",
     url: "/households",
-    payload: { name: "Langstrasse 12", memberName: "Mia" },
+    payload: { name: "Langstrasse 12", memberName: "Mia", ...newCredentials("mia") },
   });
   return response.json();
 }
@@ -76,7 +77,7 @@ describe("household routes", () => {
     const blank = await app.inject({
       method: "POST",
       url: "/households",
-      payload: { name: "   ", memberName: "Mia" },
+      payload: { name: "   ", memberName: "Mia", ...newCredentials("mia") },
     });
     const missing = await app.inject({ method: "POST", url: "/households", payload: { name: "Flat" } });
 
@@ -137,7 +138,7 @@ describe("household routes", () => {
       const joined = await app.inject({
         method: "POST",
         url: `/invites/${household.inviteCode}/members`,
-        payload: { name: "Noah" },
+        payload: { name: "Noah", ...newCredentials("noah") },
       });
       const { token: noahToken } = joined.json();
       const opened = await app.inject({ method: "GET", url: "/household", headers: authorized(noahToken) });
@@ -151,7 +152,11 @@ describe("household routes", () => {
       const { token, household } = await createHousehold(app);
       const lea = (await addMember(app, token, "Lea")).json().members[1];
       const joinAsLea = () =>
-        app.inject({ method: "POST", url: `/invites/${household.inviteCode}/members/${lea.id}/join` });
+        app.inject({
+          method: "POST",
+          url: `/invites/${household.inviteCode}/members/${lea.id}/join`,
+          payload: newCredentials("lea"),
+        });
 
       const first = await joinAsLea();
       const second = await joinAsLea();
@@ -176,7 +181,7 @@ describe("household routes", () => {
       await app.inject({
         method: "POST",
         url: `/invites/${household.inviteCode}/members`,
-        payload: { name: "Noah" },
+        payload: { name: "Noah", ...newCredentials("noah") },
       })
     ).json();
 

@@ -12,17 +12,16 @@ export function createAuthenticator(
 ) {
   return async function authenticate(request: FastifyRequest) {
     const authorization = request.headers.authorization;
-    const memberId = authorization?.startsWith(BEARER_PREFIX)
-      ? await sessionRepository.findMemberId(
-          hashSessionToken(authorization.slice(BEARER_PREFIX.length)),
-        )
+    const tokenHash = authorization?.startsWith(BEARER_PREFIX)
+      ? hashSessionToken(authorization.slice(BEARER_PREFIX.length))
       : undefined;
+    const memberId = tokenHash ? await sessionRepository.findMemberId(tokenHash) : undefined;
     // A removed member's session no longer finds a household.
     const household = memberId ? await householdRepository.findByMemberId(memberId) : undefined;
-    if (!memberId || !household) {
+    if (!tokenHash || !memberId || !household) {
       throw new HouseholdError(HouseholdErrorCode.Unauthorized, "Please join a household first.");
     }
-    return { household, currentMemberId: memberId };
+    return { household, currentMemberId: memberId, tokenHash };
   };
 }
 
