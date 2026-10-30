@@ -65,9 +65,14 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/invites/:inviteCode/members/:memberId/join` | Join as a flatmate someone already added |
 | `GET` | `/household` | Your household with its members |
 | `POST` | `/household/members` | Add a flatmate (`{ "name": "..." }`) |
-| `DELETE` | `/household/members/:memberId` | Remove a flatmate |
+| `DELETE` | `/household/members/:memberId` | Remove a flatmate who is not part of any expense |
+| `GET` | `/household/expenses` | Expenses (newest first) and everyone's balance |
+| `POST` | `/household/expenses` | Add an expense, split equally (see below) |
+| `DELETE` | `/household/expenses/:expenseId` | Delete an expense |
 
 Creating or joining returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
+
+An expense looks like `{ "description": "Groceries", "amountCents": 4550, "paidByMemberId": "...", "splitBetweenMemberIds": ["..."], "spentOn": "2026-10-30" }`. Amounts are whole cents. Leftover cents of an uneven split go to the first members, so shares always add up. A positive balance means the household owes that member.
 
 ## Scripts
 
