@@ -1,5 +1,15 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  date,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const households = pgTable(
   "households",
@@ -39,4 +49,37 @@ export const sessions = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("sessions_member_id_idx").on(table.memberId)],
+);
+
+export const expenses = pgTable(
+  "expenses",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    // No cascade: a member who is part of an expense stays in the household.
+    paidByMemberId: uuid("paid_by_member_id")
+      .notNull()
+      .references(() => members.id),
+    spentOn: date("spent_on", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("expenses_household_id_idx").on(table.householdId)],
+);
+
+export const expenseShares = pgTable(
+  "expense_shares",
+  {
+    expenseId: uuid("expense_id")
+      .notNull()
+      .references(() => expenses.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id),
+    amountCents: integer("amount_cents").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
 );
