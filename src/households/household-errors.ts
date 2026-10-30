@@ -4,6 +4,7 @@ export const HouseholdErrorCode = {
   MemberLimitReached: "MEMBER_LIMIT_REACHED",
   MemberNotFound: "MEMBER_NOT_FOUND",
   MemberAlreadyJoined: "MEMBER_ALREADY_JOINED",
+  MemberHasExpenses: "MEMBER_HAS_EXPENSES",
   CannotRemoveYourself: "CANNOT_REMOVE_YOURSELF",
   InviteNotFound: "INVITE_NOT_FOUND",
   Unauthorized: "UNAUTHORIZED",

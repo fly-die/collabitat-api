@@ -1,6 +1,9 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
+import type { ExpenseRepository } from "../expenses/expense-repository.js";
+import { involvesMember } from "../expenses/expense.js";
 import { HttpStatus } from "../http-status.js";
-import { createSessionToken, hashSessionToken } from "../sessions/session-token.js";
+import type { Authenticate } from "../sessions/authenticate.js";
+import { createSessionToken } from "../sessions/session-token.js";
 import type { SessionRepository } from "../sessions/session-repository.js";
 import {
   MAX_NAME_LENGTH,
@@ -14,19 +17,6 @@ import {
 } from "./household.js";
 import { HouseholdError, HouseholdErrorCode } from "./household-errors.js";
 import type { HouseholdRepository } from "./household-repository.js";
-
-const BEARER_PREFIX = "Bearer ";
-
-const STATUS_BY_ERROR_CODE: Record<HouseholdErrorCode, number> = {
-  [HouseholdErrorCode.InvalidName]: HttpStatus.BadRequest,
-  [HouseholdErrorCode.DuplicateMember]: HttpStatus.Conflict,
-  [HouseholdErrorCode.MemberLimitReached]: HttpStatus.Conflict,
-  [HouseholdErrorCode.MemberNotFound]: HttpStatus.NotFound,
-  [HouseholdErrorCode.MemberAlreadyJoined]: HttpStatus.Conflict,
-  [HouseholdErrorCode.CannotRemoveYourself]: HttpStatus.Conflict,
-  [HouseholdErrorCode.InviteNotFound]: HttpStatus.NotFound,
-  [HouseholdErrorCode.Unauthorized]: HttpStatus.Unauthorized,
-};
 
 const nameProperty = { type: "string", maxLength: MAX_NAME_LENGTH * 2 } as const;
 
@@ -61,28 +51,32 @@ interface MemberParams {
 }
 
 export interface HouseholdRouteDependencies {
+  authenticate: Authenticate;
   householdRepository: HouseholdRepository;
   sessionRepository: SessionRepository;
+  expenseRepository: ExpenseRepository;
 }
 
 function toHouseholdView(household: Household, currentMemberId: string) {
   return { ...household, currentMemberId };
 }
 
-export function householdRoutes({ householdRepository, sessionRepository }: HouseholdRouteDependencies) {
-  async function authenticate(request: FastifyRequest) {
-    const authorization = request.headers.authorization;
-    const memberId = authorization?.startsWith(BEARER_PREFIX)
-      ? await sessionRepository.findMemberId(
-          hashSessionToken(authorization.slice(BEARER_PREFIX.length)),
-        )
-      : undefined;
-    // A removed member's session no longer finds a household.
-    const household = memberId ? await householdRepository.findByMemberId(memberId) : undefined;
-    if (!memberId || !household) {
-      throw new HouseholdError(HouseholdErrorCode.Unauthorized, "Please join a household first.");
+export function householdRoutes({
+  authenticate,
+  householdRepository,
+  sessionRepository,
+  expenseRepository,
+}: HouseholdRouteDependencies) {
+  // Removing someone would rewrite the history of what they paid and owe.
+  async function ensureNoExpensesInvolve(household: Household, memberId: string) {
+    const expenses = await expenseRepository.listByHousehold(household.id);
+    const member = household.members.find((candidate) => candidate.id === memberId);
+    if (member && expenses.some((expense) => involvesMember(expense, memberId))) {
+      throw new HouseholdError(
+        HouseholdErrorCode.MemberHasExpenses,
+        `${member.name} is part of some expenses, so they stay in the household.`,
+      );
     }
-    return { household, currentMemberId: memberId };
   }
 
   async function loadInvite(inviteCode: string) {
@@ -104,15 +98,6 @@ export function householdRoutes({ householdRepository, sessionRepository }: Hous
   }
 
   return async function register(app: FastifyInstance) {
-    app.setErrorHandler((error, _request, reply) => {
-      if (error instanceof HouseholdError) {
-        return reply
-          .status(STATUS_BY_ERROR_CODE[error.code])
-          .send({ error: error.code, message: error.message });
-      }
-      return reply.send(error);
-    });
-
     app.post<{ Body: CreateHouseholdBody }>(
       "/households",
       { schema: { body: createHouseholdBodySchema } },
@@ -171,6 +156,7 @@ export function householdRoutes({ householdRepository, sessionRepository }: Hous
     app.delete<{ Params: MemberParams }>("/household/members/:memberId", async (request) => {
       const { household, currentMemberId } = await authenticate(request);
       const updated = removeMember(household, request.params.memberId, currentMemberId);
+      await ensureNoExpensesInvolve(household, request.params.memberId);
       await householdRepository.save(updated);
       return toHouseholdView(updated, currentMemberId);
     });
