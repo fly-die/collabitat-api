@@ -59,10 +59,13 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | Health check |
-| `POST` | `/households` | Create a household and join it (`{ "name": "...", "memberName": "..." }`) |
+| `POST` | `/households` | Create a household and an account (`{ "name": "...", "memberName": "...", "email": "...", "password": "..." }`) |
 | `GET` | `/invites/:inviteCode` | Household name and flatmates who have not joined yet |
-| `POST` | `/invites/:inviteCode/members` | Join under a new name (`{ "name": "..." }`) |
-| `POST` | `/invites/:inviteCode/members/:memberId/join` | Join as a flatmate someone already added |
+| `POST` | `/invites/:inviteCode/members` | Join under a new name with an account (`{ "name": "...", "email": "...", "password": "..." }`) |
+| `POST` | `/invites/:inviteCode/members/:memberId/join` | Join as a flatmate someone already added (`{ "email": "...", "password": "..." }`) |
+| `POST` | `/sessions` | Log in (`{ "email": "...", "password": "..." }`), 5 tries per email per minute |
+| `DELETE` | `/session` | Log out |
+| `POST` | `/household/account` | Add an account for a flatmate who joined before accounts existed |
 | `GET` | `/household` | Your household with its members |
 | `POST` | `/household/members` | Add a flatmate (`{ "name": "..." }`) |
 | `DELETE` | `/household/members/:memberId` | Remove a flatmate who is not part of any expense |
@@ -70,7 +73,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/household/expenses` | Add an expense, split equally (see below) |
 | `DELETE` | `/household/expenses/:expenseId` | Delete an expense |
 
-Creating or joining returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
+Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
 An expense looks like `{ "description": "Groceries", "amountCents": 4550, "paidByMemberId": "...", "splitBetweenMemberIds": ["..."], "spentOn": "2026-10-30" }`. Amounts are whole cents. Leftover cents of an uneven split go to the first members, so shares always add up. A positive balance means the household owes that member.
 
