@@ -163,7 +163,14 @@ describe("expense routes", () => {
       expect(view.transfers).toEqual([]);
       expect(view.balances.map((balance) => balance.balanceCents)).toEqual([0, 0]);
       expect(view.settlements).toEqual([
-        { id: expect.any(String), fromMemberId: lea.id, toMemberId: mia.id, amountCents: 1500, settledOn: "2026-10-31" },
+        {
+          id: expect.any(String),
+          fromMemberId: lea.id,
+          toMemberId: mia.id,
+          amountCents: 1500,
+          settledOn: "2026-10-31",
+          createdAt: expect.any(String),
+        },
       ]);
     });
 

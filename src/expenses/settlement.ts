@@ -27,7 +27,7 @@ export function createSettlement(household: Household, newSettlement: NewSettlem
   }
   validateAmount(newSettlement.amountCents);
   validateDate(newSettlement.settledOn);
-  return { id: randomUUID(), ...newSettlement };
+  return { id: randomUUID(), ...newSettlement, createdAt: new Date().toISOString() };
 }
 
 // Pairs the biggest debt with the biggest credit until everything is paid. Every round settles at

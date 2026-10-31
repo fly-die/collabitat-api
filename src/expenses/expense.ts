@@ -19,6 +19,8 @@ export interface Expense {
   // A calendar day (YYYY-MM-DD), so it reads the same in every time zone.
   spentOn: string;
   shares: ExpenseShare[];
+  // When it was added (ISO timestamp), so entries of the same day keep their order.
+  createdAt: string;
 }
 
 export interface NewExpense {
@@ -101,6 +103,7 @@ export function createExpense(household: Household, newExpense: NewExpense): Exp
       newExpense.amountCents,
       participants.map((member) => member.id),
     ),
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -111,6 +114,7 @@ export interface Settlement {
   toMemberId: string;
   amountCents: number;
   settledOn: string;
+  createdAt: string;
 }
 
 export function calculateBalances(

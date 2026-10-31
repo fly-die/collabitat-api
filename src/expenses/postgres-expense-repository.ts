@@ -15,6 +15,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
         amountCents: expenses.amountCents,
         paidByMemberId: expenses.paidByMemberId,
         spentOn: expenses.spentOn,
+        createdAt: expenses.createdAt,
       })
       .from(expenses)
       .where(eq(expenses.householdId, householdId))
@@ -41,6 +42,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
       .orderBy(asc(members.createdAt), asc(members.id));
     return rows.map((row) => ({
       ...row,
+      createdAt: row.createdAt.toISOString(),
       shares: shares
         .filter((share) => share.expenseId === row.id)
         .map(({ memberId, amountCents }) => ({ memberId, amountCents })),
@@ -49,8 +51,8 @@ export class PostgresExpenseRepository implements ExpenseRepository {
 
   async add(householdId: string, expense: Expense) {
     await this.database.transaction(async (transaction) => {
-      const { shares, ...columns } = expense;
-      await transaction.insert(expenses).values({ ...columns, householdId });
+      const { shares, createdAt, ...columns } = expense;
+      await transaction.insert(expenses).values({ ...columns, householdId, createdAt: new Date(createdAt) });
       await transaction
         .insert(expenseShares)
         .values(shares.map((share) => ({ ...share, expenseId: expense.id })));
