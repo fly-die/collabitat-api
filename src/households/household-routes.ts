@@ -5,6 +5,7 @@ import type { AccountService } from "../accounts/account-service.js";
 import type { Credentials } from "../accounts/account.js";
 import type { ExpenseRepository } from "../expenses/expense-repository.js";
 import { involvesMember } from "../expenses/expense.js";
+import type { SettlementRepository } from "../expenses/settlement-repository.js";
 import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import {
@@ -64,6 +65,7 @@ export interface HouseholdRouteDependencies {
   accountRepository: AccountRepository;
   householdRepository: HouseholdRepository;
   expenseRepository: ExpenseRepository;
+  settlementRepository: SettlementRepository;
   views: HouseholdViews;
 }
 
@@ -73,16 +75,23 @@ export function householdRoutes({
   accountRepository,
   householdRepository,
   expenseRepository,
+  settlementRepository,
   views,
 }: HouseholdRouteDependencies) {
   // Removing someone would rewrite the history of what they paid and owe.
-  async function ensureNoExpensesInvolve(household: Household, memberId: string) {
-    const expenses = await expenseRepository.listByHousehold(household.id);
+  async function ensureNoMoneyInvolves(household: Household, memberId: string) {
+    const [expenses, settlements] = await Promise.all([
+      expenseRepository.listByHousehold(household.id),
+      settlementRepository.listByHousehold(household.id),
+    ]);
     const member = household.members.find((candidate) => candidate.id === memberId);
-    if (member && expenses.some((expense) => involvesMember(expense, memberId))) {
+    const isInvolved =
+      expenses.some((expense) => involvesMember(expense, memberId)) ||
+      settlements.some((settlement) => settlement.fromMemberId === memberId || settlement.toMemberId === memberId);
+    if (member && isInvolved) {
       throw new HouseholdError(
         HouseholdErrorCode.MemberHasExpenses,
-        `${member.name} is part of some expenses, so they stay in the household.`,
+        `${member.name} is part of some expenses or payments, so they stay in the household.`,
       );
     }
   }
@@ -166,7 +175,7 @@ export function householdRoutes({
     app.delete<{ Params: MemberParams }>("/household/members/:memberId", async (request) => {
       const { household, currentMemberId } = await authenticate(request);
       const updated = removeMember(household, request.params.memberId, currentMemberId);
-      await ensureNoExpensesInvolve(household, request.params.memberId);
+      await ensureNoMoneyInvolves(household, request.params.memberId);
       await householdRepository.save(updated);
       return views.viewFor(updated, currentMemberId);
     });

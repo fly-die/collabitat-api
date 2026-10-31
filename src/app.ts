@@ -13,6 +13,10 @@ import {
   type ExpenseRepository,
 } from "./expenses/expense-repository.js";
 import { expenseRoutes } from "./expenses/expense-routes.js";
+import {
+  InMemorySettlementRepository,
+  type SettlementRepository,
+} from "./expenses/settlement-repository.js";
 import { householdRoutes } from "./households/household-routes.js";
 import {
   InMemoryHouseholdRepository,
@@ -31,6 +35,7 @@ export interface AppDependencies {
   sessionRepository?: SessionRepository;
   expenseRepository?: ExpenseRepository;
   accountRepository?: AccountRepository;
+  settlementRepository?: SettlementRepository;
   webOrigins?: string[];
 }
 
@@ -39,6 +44,7 @@ export function buildApp({
   sessionRepository = new InMemorySessionRepository(),
   expenseRepository = new InMemoryExpenseRepository(),
   accountRepository = new InMemoryAccountRepository(),
+  settlementRepository = new InMemorySettlementRepository(),
   webOrigins = [],
 }: AppDependencies = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
@@ -58,11 +64,19 @@ export function buildApp({
   });
   app.register(healthRoutes);
   app.register(
-    householdRoutes({ authenticate, accounts, accountRepository, householdRepository, expenseRepository, views }),
+    householdRoutes({
+      authenticate,
+      accounts,
+      accountRepository,
+      householdRepository,
+      expenseRepository,
+      settlementRepository,
+      views,
+    }),
   );
   app.register(
     accountRoutes({ authenticate, accounts, accountRepository, householdRepository, sessionRepository, views }),
   );
-  app.register(expenseRoutes({ authenticate, expenseRepository }));
+  app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository }));
   return app;
 }

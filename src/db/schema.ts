@@ -97,3 +97,24 @@ export const expenseShares = pgTable(
   },
   (table) => [primaryKey({ columns: [table.expenseId, table.memberId] })],
 );
+
+export const settlements = pgTable(
+  "settlements",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    // No cascade: a member who paid or got paid stays in the household.
+    fromMemberId: uuid("from_member_id")
+      .notNull()
+      .references(() => members.id),
+    toMemberId: uuid("to_member_id")
+      .notNull()
+      .references(() => members.id),
+    amountCents: integer("amount_cents").notNull(),
+    settledOn: date("settled_on", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("settlements_household_id_idx").on(table.householdId)],
+);

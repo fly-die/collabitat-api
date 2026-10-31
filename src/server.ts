@@ -2,6 +2,7 @@ import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { connectDatabase } from "./db/database.js";
 import { PostgresAccountRepository } from "./accounts/postgres-account-repository.js";
+import { PostgresSettlementRepository } from "./expenses/postgres-settlement-repository.js";
 import { PostgresExpenseRepository } from "./expenses/postgres-expense-repository.js";
 import { PostgresHouseholdRepository } from "./households/postgres-household-repository.js";
 import { PostgresSessionRepository } from "./sessions/postgres-session-repository.js";
@@ -14,6 +15,7 @@ const app = buildApp({
   sessionRepository: database ? new PostgresSessionRepository(database.database) : undefined,
   expenseRepository: database ? new PostgresExpenseRepository(database.database) : undefined,
   accountRepository: database ? new PostgresAccountRepository(database.database) : undefined,
+  settlementRepository: database ? new PostgresSettlementRepository(database.database) : undefined,
   webOrigins: config.webOrigins,
 });
 
