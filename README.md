@@ -69,13 +69,15 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `GET` | `/household` | Your household with its members |
 | `POST` | `/household/members` | Add a flatmate (`{ "name": "..." }`) |
 | `DELETE` | `/household/members/:memberId` | Remove a flatmate who is not part of any expense |
-| `GET` | `/household/expenses` | Expenses (newest first) and everyone's balance |
+| `GET` | `/household/expenses` | Expenses, payments, balances and the suggested payments to settle up |
 | `POST` | `/household/expenses` | Add an expense, split equally (see below) |
 | `DELETE` | `/household/expenses/:expenseId` | Delete an expense |
+| `POST` | `/household/settlements` | Record a payment (`{ "fromMemberId": "...", "toMemberId": "...", "amountCents": 1500, "settledOn": "2026-10-31" }`) |
+| `DELETE` | `/household/settlements/:settlementId` | Delete a payment |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
-An expense looks like `{ "description": "Groceries", "amountCents": 4550, "paidByMemberId": "...", "splitBetweenMemberIds": ["..."], "spentOn": "2026-10-30" }`. Amounts are whole cents. Leftover cents of an uneven split go to the first members, so shares always add up. A positive balance means the household owes that member.
+An expense looks like `{ "description": "Groceries", "amountCents": 4550, "paidByMemberId": "...", "splitBetweenMemberIds": ["..."], "spentOn": "2026-10-30" }`. Amounts are whole cents. Leftover cents of an uneven split go to the first members, so shares always add up. A positive balance means the household owes that member. Suggested payments (`transfers`) settle everyone in at most one payment less than the number of people.
 
 ## Scripts
 
