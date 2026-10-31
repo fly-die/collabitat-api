@@ -5,6 +5,8 @@ export const ExpenseErrorCode = {
   UnknownPayer: "UNKNOWN_PAYER",
   InvalidSplit: "INVALID_SPLIT",
   ExpenseNotFound: "EXPENSE_NOT_FOUND",
+  InvalidSettlement: "INVALID_SETTLEMENT",
+  SettlementNotFound: "SETTLEMENT_NOT_FOUND",
 } as const;
 
 export type ExpenseErrorCode = (typeof ExpenseErrorCode)[keyof typeof ExpenseErrorCode];

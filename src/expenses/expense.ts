@@ -46,7 +46,7 @@ function normalizeDescription(rawDescription: string) {
   return description;
 }
 
-function validateAmount(amountCents: number) {
+export function validateAmount(amountCents: number) {
   if (!Number.isInteger(amountCents) || amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
     throw new ExpenseError(
       ExpenseErrorCode.InvalidAmount,
@@ -55,7 +55,7 @@ function validateAmount(amountCents: number) {
   }
 }
 
-function validateDate(spentOn: string) {
+export function validateDate(spentOn: string) {
   const date = new Date(`${spentOn}T00:00:00Z`);
   if (!ISO_DATE_PATTERN.test(spentOn) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== spentOn) {
     throw new ExpenseError(ExpenseErrorCode.InvalidDate, "Pick a valid date.");
@@ -104,7 +104,20 @@ export function createExpense(household: Household, newExpense: NewExpense): Exp
   };
 }
 
-export function calculateBalances(members: Member[], expenses: Expense[]): Balance[] {
+// A payment from one flatmate to another, recorded when they settle up.
+export interface Settlement {
+  id: string;
+  fromMemberId: string;
+  toMemberId: string;
+  amountCents: number;
+  settledOn: string;
+}
+
+export function calculateBalances(
+  members: Member[],
+  expenses: Expense[],
+  settlements: Settlement[] = [],
+): Balance[] {
   const balanceByMemberId = new Map(members.map((member) => [member.id, 0]));
   const adjust = (memberId: string, cents: number) =>
     balanceByMemberId.set(memberId, (balanceByMemberId.get(memberId) ?? 0) + cents);
@@ -114,6 +127,10 @@ export function calculateBalances(members: Member[], expenses: Expense[]): Balan
     for (const share of expense.shares) {
       adjust(share.memberId, -share.amountCents);
     }
+  }
+  for (const settlement of settlements) {
+    adjust(settlement.fromMemberId, settlement.amountCents);
+    adjust(settlement.toMemberId, -settlement.amountCents);
   }
   return members.map((member) => ({
     memberId: member.id,

@@ -32,6 +32,8 @@ const STATUS_BY_EXPENSE_ERROR: Record<ExpenseErrorCode, number> = {
   [ExpenseErrorCode.UnknownPayer]: HttpStatus.BadRequest,
   [ExpenseErrorCode.InvalidSplit]: HttpStatus.BadRequest,
   [ExpenseErrorCode.ExpenseNotFound]: HttpStatus.NotFound,
+  [ExpenseErrorCode.InvalidSettlement]: HttpStatus.BadRequest,
+  [ExpenseErrorCode.SettlementNotFound]: HttpStatus.NotFound,
 };
 
 export class TooManyAttemptsError extends Error {
