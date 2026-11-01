@@ -71,6 +71,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/members/:memberId` | Remove a flatmate who is not part of any expense |
 | `GET` | `/household/expenses` | Expenses, payments, balances and the suggested payments to settle up |
 | `POST` | `/household/expenses` | Add an expense, split equally (see below) |
+| `PUT` | `/household/expenses/:expenseId` | Fix an expense, with the same body as adding one |
 | `DELETE` | `/household/expenses/:expenseId` | Delete an expense |
 | `POST` | `/household/settlements` | Record a payment (`{ "fromMemberId": "...", "toMemberId": "...", "amountCents": 1500, "settledOn": "2026-10-31" }`) |
 | `DELETE` | `/household/settlements/:settlementId` | Delete a payment |
