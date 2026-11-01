@@ -84,27 +84,34 @@ export function splitEqually(amountCents: number, memberIds: string[]): ExpenseS
   }));
 }
 
-export function createExpense(household: Household, newExpense: NewExpense): Expense {
-  const description = normalizeDescription(newExpense.description);
-  validateAmount(newExpense.amountCents);
-  validateDate(newExpense.spentOn);
-  if (!household.members.some((member) => member.id === newExpense.paidByMemberId)) {
+function validatedDetails(household: Household, details: NewExpense) {
+  const description = normalizeDescription(details.description);
+  validateAmount(details.amountCents);
+  validateDate(details.spentOn);
+  if (!household.members.some((member) => member.id === details.paidByMemberId)) {
     throw new ExpenseError(ExpenseErrorCode.UnknownPayer, "The person who paid isn't in this household.");
   }
-  const participants = membersToSplitBetween(household, newExpense.splitBetweenMemberIds);
+  const participants = membersToSplitBetween(household, details.splitBetweenMemberIds);
 
   return {
-    id: randomUUID(),
     description,
-    amountCents: newExpense.amountCents,
-    paidByMemberId: newExpense.paidByMemberId,
-    spentOn: newExpense.spentOn,
+    amountCents: details.amountCents,
+    paidByMemberId: details.paidByMemberId,
+    spentOn: details.spentOn,
     shares: splitEqually(
-      newExpense.amountCents,
+      details.amountCents,
       participants.map((member) => member.id),
     ),
-    createdAt: new Date().toISOString(),
   };
+}
+
+export function createExpense(household: Household, newExpense: NewExpense): Expense {
+  return { id: randomUUID(), ...validatedDetails(household, newExpense), createdAt: new Date().toISOString() };
+}
+
+// Keeps the id and when it was added, so a fixed expense stays in its place in the history.
+export function editExpense(household: Household, expense: Expense, changes: NewExpense): Expense {
+  return { id: expense.id, ...validatedDetails(household, changes), createdAt: expense.createdAt };
 }
 
 // A payment from one flatmate to another, recorded when they settle up.

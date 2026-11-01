@@ -4,6 +4,7 @@ import { ExpenseErrorCode } from "../../src/expenses/expense-errors.js";
 import {
   calculateBalances,
   createExpense,
+  editExpense,
   splitEqually,
   type NewExpense,
 } from "../../src/expenses/expense.js";
@@ -60,6 +61,45 @@ describe("expenses", () => {
     ["a stranger in the split", { splitBetweenMemberIds: [mia.id, "someone-else"] }, ExpenseErrorCode.InvalidSplit],
   ])("rejects %s", (_label, overrides, code) => {
     expect(() => expense(overrides)).toThrow(expect.objectContaining({ code }));
+  });
+
+  it("edits an expense in place and splits it again", () => {
+    const original = expense();
+
+    const edited = editExpense(household, original, {
+      description: "Groceries and wine",
+      amountCents: 4001,
+      paidByMemberId: lea.id,
+      splitBetweenMemberIds: [lea.id, noah.id],
+      spentOn: "2026-10-29",
+    });
+
+    expect(edited).toEqual({
+      id: original.id,
+      description: "Groceries and wine",
+      amountCents: 4001,
+      paidByMemberId: lea.id,
+      spentOn: "2026-10-29",
+      shares: [
+        { memberId: lea.id, amountCents: 2001 },
+        { memberId: noah.id, amountCents: 2000 },
+      ],
+      createdAt: original.createdAt,
+    });
+  });
+
+  it("checks an edit like a new expense", () => {
+    const changes = {
+      description: "Groceries",
+      amountCents: 0,
+      paidByMemberId: mia.id,
+      splitBetweenMemberIds: everyone,
+      spentOn: "2026-10-30",
+    };
+
+    expect(() => editExpense(household, expense(), changes)).toThrow(
+      expect.objectContaining({ code: ExpenseErrorCode.InvalidAmount }),
+    );
   });
 
   it("works out who is owed and who owes, adding up to zero", () => {

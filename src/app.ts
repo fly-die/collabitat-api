@@ -55,7 +55,7 @@ export function buildApp({
   registerErrorHandler(app);
   app.register(cors, {
     origin: webOrigins,
-    methods: ["GET", "POST", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
   app.register(rateLimit, {

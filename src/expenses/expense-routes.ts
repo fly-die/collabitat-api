@@ -4,7 +4,7 @@ import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import { ExpenseError, ExpenseErrorCode } from "./expense-errors.js";
 import type { ExpenseRepository } from "./expense-repository.js";
-import { MAX_DESCRIPTION_LENGTH, calculateBalances, createExpense, type NewExpense } from "./expense.js";
+import { MAX_DESCRIPTION_LENGTH, calculateBalances, createExpense, editExpense, type NewExpense } from "./expense.js";
 import type { SettlementRepository } from "./settlement-repository.js";
 import { createSettlement, simplifyDebts, type NewSettlement } from "./settlement.js";
 
@@ -83,6 +83,22 @@ export function expenseRoutes({ authenticate, expenseRepository, settlementRepos
         const { household } = await authenticate(request);
         await expenseRepository.add(household.id, createExpense(household, request.body));
         return reply.status(HttpStatus.Created).send(await moneyView(household));
+      },
+    );
+
+    app.put<{ Params: ExpenseParams; Body: NewExpense }>(
+      "/household/expenses/:expenseId",
+      { schema: { params: idParamsSchema("expenseId"), body: newExpenseBodySchema } },
+      async (request) => {
+        const { household } = await authenticate(request);
+        const expense = await expenseRepository.find(household.id, request.params.expenseId);
+        const isReplaced =
+          expense !== undefined &&
+          (await expenseRepository.replace(household.id, editExpense(household, expense, request.body)));
+        if (!isReplaced) {
+          throw new ExpenseError(ExpenseErrorCode.ExpenseNotFound, "That expense is already gone.");
+        }
+        return moneyView(household);
       },
     );
 

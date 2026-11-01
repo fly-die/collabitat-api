@@ -111,6 +111,75 @@ describe("expense routes", () => {
     expect((await deleteExpense()).json().error).toBe(ExpenseErrorCode.ExpenseNotFound);
   });
 
+  describe("editing", () => {
+    function editExpense(expenseId: string, changes: Record<string, unknown>, editToken = token) {
+      return app.inject({
+        method: "PUT",
+        url: `/household/expenses/${expenseId}`,
+        headers: authorized(editToken),
+        payload: {
+          description: "Groceries",
+          amountCents: 3000,
+          paidByMemberId: mia.id,
+          splitBetweenMemberIds: [mia.id, lea.id],
+          spentOn: "2026-10-30",
+          ...changes,
+        },
+      });
+    }
+
+    it("fixes an expense and answers with fresh balances", async () => {
+      const { expenses }: MoneyView = (await addExpense()).json();
+
+      const response = await editExpense(expenses[0].id, { amountCents: 4000, description: "Groceries and wine" });
+
+      expect(response.statusCode).toBe(HttpStatus.Ok);
+      const view: MoneyView = response.json();
+      expect(view.expenses).toEqual([
+        expect.objectContaining({ id: expenses[0].id, description: "Groceries and wine", amountCents: 4000 }),
+      ]);
+      expect(view.transfers).toEqual([{ fromMemberId: lea.id, toMemberId: mia.id, amountCents: 2000 }]);
+    });
+
+    it("explains why an edit was rejected and keeps the expense as it was", async () => {
+      const { expenses }: MoneyView = (await addExpense()).json();
+
+      const response = await editExpense(expenses[0].id, { splitBetweenMemberIds: [] });
+
+      expect(response.json().error).toBe(ExpenseErrorCode.InvalidSplit);
+      const listed: MoneyView = (await app.inject({ url: "/household/expenses", headers: authorized(token) })).json();
+      expect(listed.expenses).toEqual(expenses);
+    });
+
+    it("won't edit another household's expense", async () => {
+      const { expenses }: MoneyView = (await addExpense()).json();
+      const other = await householdWithLea(app);
+
+      const fromElsewhere = await editExpense(
+        expenses[0].id,
+        { paidByMemberId: other.mia.id, splitBetweenMemberIds: [other.mia.id] },
+        other.token,
+      );
+
+      expect(fromElsewhere.statusCode).toBe(HttpStatus.NotFound);
+      expect(fromElsewhere.json().error).toBe(ExpenseErrorCode.ExpenseNotFound);
+    });
+
+    it("lets the web app send edits from another origin", async () => {
+      const webOrigin = "https://flatmates.example";
+      const appForWeb = buildApp({ webOrigins: [webOrigin] });
+
+      const preflight = await appForWeb.inject({
+        method: "OPTIONS",
+        url: "/household/expenses/0b6b2b8e-3f43-4f7c-9a52-6b8f6c8b1c2d",
+        headers: { origin: webOrigin, "access-control-request-method": "PUT" },
+      });
+      await appForWeb.close();
+
+      expect(preflight.headers["access-control-allow-methods"]).toContain("PUT");
+    });
+  });
+
   it("only shows a household its own expenses", async () => {
     await addExpense();
     const other = await householdWithLea(app);

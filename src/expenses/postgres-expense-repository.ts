@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, type SQL } from "drizzle-orm";
 import type { Database } from "../db/database.js";
 import { expenseShares, expenses, members } from "../db/schema.js";
 import type { Expense } from "./expense.js";
@@ -7,7 +7,7 @@ import type { ExpenseRepository } from "./expense-repository.js";
 export class PostgresExpenseRepository implements ExpenseRepository {
   constructor(private readonly database: Database) {}
 
-  async listByHousehold(householdId: string): Promise<Expense[]> {
+  private async load(where: SQL | undefined): Promise<Expense[]> {
     const rows = await this.database
       .select({
         id: expenses.id,
@@ -18,7 +18,7 @@ export class PostgresExpenseRepository implements ExpenseRepository {
         createdAt: expenses.createdAt,
       })
       .from(expenses)
-      .where(eq(expenses.householdId, householdId))
+      .where(where)
       .orderBy(desc(expenses.spentOn), desc(expenses.createdAt));
     if (rows.length === 0) {
       return [];
@@ -49,6 +49,15 @@ export class PostgresExpenseRepository implements ExpenseRepository {
     }));
   }
 
+  listByHousehold(householdId: string) {
+    return this.load(eq(expenses.householdId, householdId));
+  }
+
+  async find(householdId: string, expenseId: string) {
+    const [expense] = await this.load(and(eq(expenses.id, expenseId), eq(expenses.householdId, householdId)));
+    return expense;
+  }
+
   async add(householdId: string, expense: Expense) {
     await this.database.transaction(async (transaction) => {
       const { shares, createdAt, ...columns } = expense;
@@ -56,6 +65,23 @@ export class PostgresExpenseRepository implements ExpenseRepository {
       await transaction
         .insert(expenseShares)
         .values(shares.map((share) => ({ ...share, expenseId: expense.id })));
+    });
+  }
+
+  async replace(householdId: string, expense: Expense) {
+    return this.database.transaction(async (transaction) => {
+      const { id, description, amountCents, paidByMemberId, spentOn, shares } = expense;
+      const updated = await transaction
+        .update(expenses)
+        .set({ description, amountCents, paidByMemberId, spentOn })
+        .where(and(eq(expenses.id, id), eq(expenses.householdId, householdId)))
+        .returning({ id: expenses.id });
+      if (updated.length === 0) {
+        return false;
+      }
+      await transaction.delete(expenseShares).where(eq(expenseShares.expenseId, id));
+      await transaction.insert(expenseShares).values(shares.map((share) => ({ ...share, expenseId: id })));
+      return true;
     });
   }
 

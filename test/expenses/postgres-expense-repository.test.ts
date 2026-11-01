@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { connectDatabase } from "../../src/db/database.js";
-import { createExpense } from "../../src/expenses/expense.js";
+import { createExpense, editExpense } from "../../src/expenses/expense.js";
 import { PostgresExpenseRepository } from "../../src/expenses/postgres-expense-repository.js";
 import { addMember, createHousehold } from "../../src/households/household.js";
 import { PostgresHouseholdRepository } from "../../src/households/postgres-household-repository.js";
@@ -48,6 +48,34 @@ describe.runIf(databaseUrl)("Postgres expense repository", () => {
     expect(await expenses.remove(household.id, rent.id)).toBe(true);
     expect(await expenses.remove(household.id, rent.id)).toBe(false);
     expect(await expenses.listByHousehold(household.id)).toEqual([groceries]);
+  });
+
+  it("replaces an expense with its new shares, only in its own household", async () => {
+    const household = await savedHouseholdWithThreeMembers();
+    const other = await savedHouseholdWithThreeMembers();
+    const [mia, lea, noah] = household.members.map((member) => member.id);
+    const groceries = createExpense(household, {
+      description: "Groceries",
+      amountCents: 3000,
+      paidByMemberId: mia,
+      splitBetweenMemberIds: [mia, lea, noah],
+      spentOn: "2026-10-30",
+    });
+    await expenses.add(household.id, groceries);
+    const fixed = editExpense(household, groceries, {
+      description: "Groceries and wine",
+      amountCents: 4001,
+      paidByMemberId: lea,
+      splitBetweenMemberIds: [lea, noah],
+      spentOn: "2026-10-29",
+    });
+
+    expect(await expenses.replace(other.id, fixed)).toBe(false);
+    expect(await expenses.find(household.id, groceries.id)).toEqual(groceries);
+
+    expect(await expenses.replace(household.id, fixed)).toBe(true);
+    expect(await expenses.find(household.id, groceries.id)).toEqual(fixed);
+    expect(await expenses.find(other.id, groceries.id)).toBeUndefined();
   });
 
   it("only removes an expense from its own household", async () => {
