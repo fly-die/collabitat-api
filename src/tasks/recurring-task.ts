@@ -31,6 +31,8 @@ export interface RecurringTask {
   interval: Interval;
   firstDueOn: string;
   createdAt: string;
+  // Who takes turns, in order. Empty when nobody in particular does it.
+  rotation: string[];
   // Latest first: latest day first, and on the same day the one recorded last.
   completions: TaskCompletion[];
 }
@@ -40,6 +42,8 @@ export interface NewRecurringTask {
   every: number;
   unit: IntervalUnit;
   firstDueOn: string;
+  // Everyone allowed takes turns when this is left out.
+  rotationMemberIds?: string[];
 }
 
 function validateDate(isoDate: string) {
@@ -70,16 +74,25 @@ function validateInterval({ every, unit }: Interval) {
   }
 }
 
-export function createRecurringTask(newTask: NewRecurringTask): RecurringTask {
+function validateRotation(rotation: string[], allowedMemberIds: string[]) {
+  if (new Set(rotation).size !== rotation.length || rotation.some((memberId) => !allowedMemberIds.includes(memberId))) {
+    throw new TaskError(TaskErrorCode.InvalidRotation, "Pick who takes turns from the people in this household.");
+  }
+}
+
+export function createRecurringTask(newTask: NewRecurringTask, allowedMemberIds: string[]): RecurringTask {
   const interval = { every: newTask.every, unit: newTask.unit };
+  const rotation = newTask.rotationMemberIds ?? allowedMemberIds;
   validateInterval(interval);
   validateDate(newTask.firstDueOn);
+  validateRotation(rotation, allowedMemberIds);
   return {
     id: randomUUID(),
     title: normalizeTitle(newTask.title),
     interval,
     firstDueOn: newTask.firstDueOn,
     createdAt: new Date().toISOString(),
+    rotation,
     completions: [],
   };
 }
@@ -115,4 +128,16 @@ export function latestCompletion(task: RecurringTask): TaskCompletion | undefine
 export function nextDueOn(task: RecurringTask) {
   const latest = latestCompletion(task);
   return latest ? addInterval(latest.doneOn, task.interval) : task.firstDueOn;
+}
+
+// Whoever did it last, the next person in the rotation is up, so swapping a turn stays fair.
+// People who left (not in currentMemberIds) drop out; with nobody left it's nobody's turn.
+export function turnOf(task: RecurringTask, currentMemberIds: string[]): string | null {
+  const rotation = task.rotation.filter((memberId) => currentMemberIds.includes(memberId));
+  if (rotation.length === 0) {
+    return null;
+  }
+  const lastDoneBy = latestCompletion(task)?.memberId;
+  const lastIndex = lastDoneBy ? rotation.indexOf(lastDoneBy) : -1;
+  return lastIndex === -1 ? rotation[0] : rotation[(lastIndex + 1) % rotation.length];
 }

@@ -2,6 +2,7 @@ export const TaskErrorCode = {
   InvalidTitle: "INVALID_TITLE",
   InvalidInterval: "INVALID_INTERVAL",
   InvalidDate: "INVALID_DATE",
+  InvalidRotation: "INVALID_ROTATION",
   TaskNotFound: "TASK_NOT_FOUND",
   CompletionNotFound: "COMPLETION_NOT_FOUND",
 } as const;

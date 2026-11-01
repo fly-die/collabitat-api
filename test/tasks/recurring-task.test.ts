@@ -4,10 +4,12 @@ import {
   createCompletion,
   createRecurringTask,
   nextDueOn,
+  turnOf,
   type NewRecurringTask,
 } from "../../src/tasks/recurring-task.js";
 import { TaskErrorCode } from "../../src/tasks/task-errors.js";
 
+const flatmates = ["mia", "lea", "noah"];
 const weeklyTrash: NewRecurringTask = { title: "  Take out   the trash ", every: 1, unit: "week", firstDueOn: "2026-11-02" };
 
 describe("recurring task", () => {
@@ -23,7 +25,7 @@ describe("recurring task", () => {
   });
 
   it("is first due when it was planned, then one interval after it was last done", () => {
-    const task = createRecurringTask(weeklyTrash);
+    const task = createRecurringTask(weeklyTrash, flatmates);
     expect(task.title).toBe("Take out the trash");
     expect(nextDueOn(task)).toBe("2026-11-02");
 
@@ -41,8 +43,40 @@ describe("recurring task", () => {
     ["more than a year of units", { every: 366 }, TaskErrorCode.InvalidInterval],
     ["an unknown unit", { unit: "year" as never }, TaskErrorCode.InvalidInterval],
     ["an impossible date", { firstDueOn: "2026-02-30" }, TaskErrorCode.InvalidDate],
+    ["someone from elsewhere taking turns", { rotationMemberIds: ["mia", "stranger"] }, TaskErrorCode.InvalidRotation],
+    ["someone taking two turns", { rotationMemberIds: ["mia", "mia"] }, TaskErrorCode.InvalidRotation],
   ])("rejects %s", (_label, overrides, code) => {
-    expect(() => createRecurringTask({ ...weeklyTrash, ...overrides })).toThrow(expect.objectContaining({ code }));
+    expect(() => createRecurringTask({ ...weeklyTrash, ...overrides }, flatmates)).toThrow(expect.objectContaining({ code }));
+  });
+
+  it("lets everyone take turns by default, starting with the first", () => {
+    const task = createRecurringTask(weeklyTrash, flatmates);
+
+    expect(task.rotation).toEqual(flatmates);
+    expect(turnOf(task, flatmates)).toBe("mia");
+  });
+
+  it("passes the turn to whoever comes after the person who did it last", () => {
+    const task = createRecurringTask({ ...weeklyTrash, rotationMemberIds: ["lea", "noah", "mia"] }, flatmates);
+    const doneBy = (memberId: string | null, doneOn = "2026-11-02") => ({
+      ...task,
+      completions: [{ ...createCompletion("x", doneOn), memberId }],
+    });
+
+    expect(turnOf(doneBy("lea"), flatmates)).toBe("noah");
+    expect(turnOf(doneBy("mia"), flatmates)).toBe("lea");
+    // Noah stepped in for Lea: the turn goes on from Noah, so Mia is next.
+    expect(turnOf(doneBy("noah"), flatmates)).toBe("mia");
+    // Done by someone outside the rotation, or who left: the rotation starts over.
+    expect(turnOf(doneBy(null), flatmates)).toBe("lea");
+  });
+
+  it("drops people who left, and is nobody's turn when nobody is left", () => {
+    const task = createRecurringTask({ ...weeklyTrash, rotationMemberIds: ["lea", "noah"] }, flatmates);
+
+    expect(turnOf(task, ["mia", "noah"])).toBe("noah");
+    expect(turnOf(task, ["mia"])).toBeNull();
+    expect(turnOf(createRecurringTask({ ...weeklyTrash, rotationMemberIds: [] }, flatmates), flatmates)).toBeNull();
   });
 
   it("rejects a completion without a valid day", () => {
