@@ -118,3 +118,34 @@ export const settlements = pgTable(
   },
   (table) => [index("settlements_household_id_idx").on(table.householdId)],
 );
+
+export const recurringTasks = pgTable(
+  "recurring_tasks",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    intervalCount: integer("interval_count").notNull(),
+    intervalUnit: text("interval_unit").notNull(),
+    firstDueOn: date("first_due_on", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("recurring_tasks_household_id_idx").on(table.householdId)],
+);
+
+export const taskCompletions = pgTable(
+  "task_completions",
+  {
+    id: uuid("id").primaryKey(),
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => recurringTasks.id, { onDelete: "cascade" }),
+    // Set to null when the member leaves, so the history keeps the date.
+    memberId: uuid("member_id").references(() => members.id, { onDelete: "set null" }),
+    doneOn: date("done_on", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("task_completions_task_id_idx").on(table.taskId)],
+);
