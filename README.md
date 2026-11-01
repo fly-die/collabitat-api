@@ -75,6 +75,11 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/expenses/:expenseId` | Delete an expense |
 | `POST` | `/household/settlements` | Record a payment (`{ "fromMemberId": "...", "toMemberId": "...", "amountCents": 1500, "settledOn": "2026-10-31" }`) |
 | `DELETE` | `/household/settlements/:settlementId` | Delete a payment |
+| `GET` | `/household/tasks` | Recurring chores, soonest due first |
+| `POST` | `/household/tasks` | Add one: `title`, `every`, `unit` (`day`, `week`, `month`), `firstDueOn` |
+| `DELETE` | `/household/tasks/:taskId` | Delete a chore |
+| `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
+| `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 

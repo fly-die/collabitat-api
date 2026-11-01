@@ -6,6 +6,7 @@ import { PostgresSettlementRepository } from "./expenses/postgres-settlement-rep
 import { PostgresExpenseRepository } from "./expenses/postgres-expense-repository.js";
 import { PostgresHouseholdRepository } from "./households/postgres-household-repository.js";
 import { PostgresSessionRepository } from "./sessions/postgres-session-repository.js";
+import { PostgresTaskRepository } from "./tasks/postgres-task-repository.js";
 
 const config = loadConfig();
 const database = config.databaseUrl ? await connectDatabase(config.databaseUrl) : undefined;
@@ -16,6 +17,7 @@ const app = buildApp({
   expenseRepository: database ? new PostgresExpenseRepository(database.database) : undefined,
   accountRepository: database ? new PostgresAccountRepository(database.database) : undefined,
   settlementRepository: database ? new PostgresSettlementRepository(database.database) : undefined,
+  taskRepository: database ? new PostgresTaskRepository(database.database) : undefined,
   webOrigins: config.webOrigins,
 });
 

@@ -25,6 +25,8 @@ import {
 import { householdViews } from "./households/household-view.js";
 import { healthRoutes } from "./routes/health.js";
 import { createAuthenticator } from "./sessions/authenticate.js";
+import { InMemoryTaskRepository, type TaskRepository } from "./tasks/task-repository.js";
+import { taskRoutes } from "./tasks/task-routes.js";
 import {
   InMemorySessionRepository,
   type SessionRepository,
@@ -36,6 +38,7 @@ export interface AppDependencies {
   expenseRepository?: ExpenseRepository;
   accountRepository?: AccountRepository;
   settlementRepository?: SettlementRepository;
+  taskRepository?: TaskRepository;
   webOrigins?: string[];
 }
 
@@ -45,6 +48,7 @@ export function buildApp({
   expenseRepository = new InMemoryExpenseRepository(),
   accountRepository = new InMemoryAccountRepository(),
   settlementRepository = new InMemorySettlementRepository(),
+  taskRepository = new InMemoryTaskRepository(),
   webOrigins = [],
 }: AppDependencies = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
@@ -78,5 +82,6 @@ export function buildApp({
     accountRoutes({ authenticate, accounts, accountRepository, householdRepository, sessionRepository, views }),
   );
   app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository }));
+  app.register(taskRoutes({ authenticate, taskRepository }));
   return app;
 }

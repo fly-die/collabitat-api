@@ -3,6 +3,7 @@ import { AccountError, AccountErrorCode } from "./accounts/account-errors.js";
 import { ExpenseError, ExpenseErrorCode } from "./expenses/expense-errors.js";
 import { HouseholdError, HouseholdErrorCode } from "./households/household-errors.js";
 import { HttpStatus } from "./http-status.js";
+import { TaskError, TaskErrorCode } from "./tasks/task-errors.js";
 
 const STATUS_BY_HOUSEHOLD_ERROR: Record<HouseholdErrorCode, number> = {
   [HouseholdErrorCode.InvalidName]: HttpStatus.BadRequest,
@@ -36,6 +37,14 @@ const STATUS_BY_EXPENSE_ERROR: Record<ExpenseErrorCode, number> = {
   [ExpenseErrorCode.SettlementNotFound]: HttpStatus.NotFound,
 };
 
+const STATUS_BY_TASK_ERROR: Record<TaskErrorCode, number> = {
+  [TaskErrorCode.InvalidTitle]: HttpStatus.BadRequest,
+  [TaskErrorCode.InvalidInterval]: HttpStatus.BadRequest,
+  [TaskErrorCode.InvalidDate]: HttpStatus.BadRequest,
+  [TaskErrorCode.TaskNotFound]: HttpStatus.NotFound,
+  [TaskErrorCode.CompletionNotFound]: HttpStatus.NotFound,
+};
+
 export class TooManyAttemptsError extends Error {
   readonly code = "TOO_MANY_ATTEMPTS";
 
@@ -45,15 +54,23 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
-type DomainError = HouseholdError | ExpenseError | AccountError;
+type DomainError = HouseholdError | ExpenseError | AccountError | TaskError;
 
 function isDomainError(error: unknown): error is DomainError {
-  return error instanceof HouseholdError || error instanceof ExpenseError || error instanceof AccountError;
+  return (
+    error instanceof HouseholdError ||
+    error instanceof ExpenseError ||
+    error instanceof AccountError ||
+    error instanceof TaskError
+  );
 }
 
 function statusOf(error: DomainError) {
   if (error instanceof HouseholdError) {
     return STATUS_BY_HOUSEHOLD_ERROR[error.code];
+  }
+  if (error instanceof TaskError) {
+    return STATUS_BY_TASK_ERROR[error.code];
   }
   return error instanceof AccountError
     ? STATUS_BY_ACCOUNT_ERROR[error.code]
