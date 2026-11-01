@@ -12,6 +12,8 @@ interface TasksView {
     title: string;
     nextDueOn: string;
     lastCompletion: { id: string; doneOn: string; memberId: string } | null;
+    rotation: string[];
+    turnMemberId: string | null;
   }[];
 }
 
@@ -42,12 +44,12 @@ describe("task routes", () => {
 
   afterEach(() => app.close());
 
-  function addTask(title: string, firstDueOn: string, every = 1, unit = "week", taskToken = token) {
+  function addTask(title: string, firstDueOn: string, every = 1, unit = "week", extra: Record<string, unknown> = {}) {
     return app.inject({
       method: "POST",
       url: "/household/tasks",
-      headers: authorized(taskToken),
-      payload: { title, every, unit, firstDueOn },
+      headers: authorized(token),
+      payload: { title, every, unit, firstDueOn, ...extra },
     });
   }
 
@@ -92,6 +94,37 @@ describe("task routes", () => {
     const [afterUndo] = ((await undo()).json() as TasksView).tasks;
     expect(afterUndo).toEqual(expect.objectContaining({ nextDueOn: "2026-11-02", lastCompletion: null }));
     expect((await undo()).json().error).toBe(TaskErrorCode.CompletionNotFound);
+  });
+
+  it("says whose turn it is, and passes it on when the chore is done", async () => {
+    const lea = (
+      await app.inject({ method: "POST", url: "/household/members", headers: authorized(token), payload: { name: "Lea" } })
+    ).json().members[1];
+    const [trash] = ((await addTask("Take out the trash", "2026-11-02")).json() as TasksView).tasks;
+    expect(trash).toEqual(expect.objectContaining({ rotation: [miaId, lea.id], turnMemberId: miaId }));
+
+    const [afterDone] = ((await markDone(trash.id, "2026-11-02")).json() as TasksView).tasks;
+    expect(afterDone.turnMemberId).toBe(lea.id);
+
+    const leaOnly = await addTask("Water the plants", "2026-11-03", 1, "week", { rotationMemberIds: [lea.id] });
+    expect((leaOnly.json() as TasksView).tasks.find((task) => task.title === "Water the plants")).toEqual(expect.objectContaining({ rotation: [lea.id], turnMemberId: lea.id }));
+
+    await app.inject({ method: "DELETE", url: `/household/members/${lea.id}`, headers: authorized(token) });
+    const listed: TasksView = (await app.inject({ url: "/household/tasks", headers: authorized(token) })).json();
+    expect(listed.tasks.map((task) => [task.title, task.turnMemberId])).toEqual([
+      ["Water the plants", null],
+      ["Take out the trash", miaId],
+    ]);
+  });
+
+  it("won't let someone from another household take turns", async () => {
+    const other = await newHousehold(app, "seefeld");
+
+    const response = await addTask("Take out the trash", "2026-11-02", 1, "week", {
+      rotationMemberIds: [other.household.currentMemberId],
+    });
+
+    expect(response.json().error).toBe(TaskErrorCode.InvalidRotation);
   });
 
   it("explains a chore it can't add", async () => {

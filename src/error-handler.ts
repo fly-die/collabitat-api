@@ -41,6 +41,7 @@ const STATUS_BY_TASK_ERROR: Record<TaskErrorCode, number> = {
   [TaskErrorCode.InvalidTitle]: HttpStatus.BadRequest,
   [TaskErrorCode.InvalidInterval]: HttpStatus.BadRequest,
   [TaskErrorCode.InvalidDate]: HttpStatus.BadRequest,
+  [TaskErrorCode.InvalidRotation]: HttpStatus.BadRequest,
   [TaskErrorCode.TaskNotFound]: HttpStatus.NotFound,
   [TaskErrorCode.CompletionNotFound]: HttpStatus.NotFound,
 };

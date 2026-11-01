@@ -149,3 +149,18 @@ export const taskCompletions = pgTable(
   },
   (table) => [index("task_completions_task_id_idx").on(table.taskId)],
 );
+
+// Who takes turns on a task, in order; leaving the household drops a member out.
+export const taskRotations = pgTable(
+  "task_rotations",
+  {
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => recurringTasks.id, { onDelete: "cascade" }),
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.taskId, table.memberId] })],
+);

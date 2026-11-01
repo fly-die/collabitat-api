@@ -43,6 +43,13 @@
       "when": 1793545708083,
       "tag": "0005_recurring_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793546664895,
+      "tag": "0006_chore_turns",
+      "breakpoints": true
     }
   ]
 }

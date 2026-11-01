@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
+import { MAX_MEMBERS } from "../households/household.js";
 import { HttpStatus } from "../http-status.js";
+import type { Household } from "../households/household.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import {
   INTERVAL_UNITS,
@@ -8,6 +10,7 @@ import {
   createRecurringTask,
   latestCompletion,
   nextDueOn,
+  turnOf,
   type NewRecurringTask,
   type RecurringTask,
 } from "./recurring-task.js";
@@ -27,6 +30,7 @@ const newTaskBodySchema = {
     every: { type: "number" },
     unit: { type: "string", enum: INTERVAL_UNITS },
     firstDueOn: { type: "string", maxLength: ISO_DATE_LENGTH },
+    rotationMemberIds: { type: "array", maxItems: MAX_MEMBERS, items: uuidProperty },
   },
 } as const;
 
@@ -62,7 +66,7 @@ interface TaskRouteDependencies {
   taskRepository: TaskRepository;
 }
 
-function toTaskView(task: RecurringTask) {
+function toTaskView(task: RecurringTask, currentMemberIds: string[]) {
   const latest = latestCompletion(task);
   return {
     id: task.id,
@@ -72,13 +76,16 @@ function toTaskView(task: RecurringTask) {
     firstDueOn: task.firstDueOn,
     nextDueOn: nextDueOn(task),
     lastCompletion: latest ? { id: latest.id, doneOn: latest.doneOn, memberId: latest.memberId } : null,
+    rotation: task.rotation.filter((memberId) => currentMemberIds.includes(memberId)),
+    turnMemberId: turnOf(task, currentMemberIds),
   };
 }
 
 export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependencies) {
   // Soonest first; the same day is ordered by title so the list doesn't jump around.
-  async function tasksView(householdId: string) {
-    const tasks = (await taskRepository.listByHousehold(householdId)).map(toTaskView);
+  async function tasksView(household: Household) {
+    const memberIds = household.members.map((member) => member.id);
+    const tasks = (await taskRepository.listByHousehold(household.id)).map((task) => toTaskView(task, memberIds));
     tasks.sort((first, second) => first.nextDueOn.localeCompare(second.nextDueOn) || first.title.localeCompare(second.title));
     return { tasks };
   }
@@ -94,7 +101,7 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
   return async function register(app: FastifyInstance) {
     app.get("/household/tasks", async (request) => {
       const { household } = await authenticate(request);
-      return tasksView(household.id);
+      return tasksView(household);
     });
 
     app.post<{ Body: NewRecurringTask }>(
@@ -102,8 +109,9 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
       { schema: { body: newTaskBodySchema } },
       async (request, reply) => {
         const { household } = await authenticate(request);
-        await taskRepository.add(household.id, createRecurringTask(request.body));
-        return reply.status(HttpStatus.Created).send(await tasksView(household.id));
+        const memberIds = household.members.map((member) => member.id);
+        await taskRepository.add(household.id, createRecurringTask(request.body, memberIds));
+        return reply.status(HttpStatus.Created).send(await tasksView(household));
       },
     );
 
@@ -115,7 +123,7 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
         if (!(await taskRepository.remove(household.id, request.params.taskId))) {
           throw new TaskError(TaskErrorCode.TaskNotFound, "That chore is already gone.");
         }
-        return tasksView(household.id);
+        return tasksView(household);
       },
     );
 
@@ -126,7 +134,7 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
         const { household, currentMemberId } = await authenticate(request);
         const task = await findTask(household.id, request.params.taskId);
         await taskRepository.addCompletion(task.id, createCompletion(currentMemberId, request.body.doneOn));
-        return reply.status(HttpStatus.Created).send(await tasksView(household.id));
+        return reply.status(HttpStatus.Created).send(await tasksView(household));
       },
     );
 
@@ -139,7 +147,7 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
         if (!(await taskRepository.removeCompletion(task.id, request.params.completionId))) {
           throw new TaskError(TaskErrorCode.CompletionNotFound, "That was already undone.");
         }
-        return tasksView(household.id);
+        return tasksView(household);
       },
     );
   };

@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, type SQL } from "drizzle-orm";
 import type { Database } from "../db/database.js";
-import { recurringTasks, taskCompletions } from "../db/schema.js";
+import { recurringTasks, taskCompletions, taskRotations } from "../db/schema.js";
 import type { IntervalUnit, RecurringTask, TaskCompletion } from "./recurring-task.js";
 import type { TaskRepository } from "./task-repository.js";
 
@@ -12,22 +12,24 @@ export class PostgresTaskRepository implements TaskRepository {
     if (tasks.length === 0) {
       return [];
     }
+    const taskIds = tasks.map((task) => task.id);
     const completions = await this.database
       .select()
       .from(taskCompletions)
-      .where(
-        inArray(
-          taskCompletions.taskId,
-          tasks.map((task) => task.id),
-        ),
-      )
+      .where(inArray(taskCompletions.taskId, taskIds))
       .orderBy(desc(taskCompletions.doneOn), desc(taskCompletions.createdAt));
+    const rotations = await this.database
+      .select()
+      .from(taskRotations)
+      .where(inArray(taskRotations.taskId, taskIds))
+      .orderBy(asc(taskRotations.position));
     return tasks.map((task) => ({
       id: task.id,
       title: task.title,
       interval: { every: task.intervalCount, unit: task.intervalUnit as IntervalUnit },
       firstDueOn: task.firstDueOn,
       createdAt: task.createdAt.toISOString(),
+      rotation: rotations.filter((entry) => entry.taskId === task.id).map((entry) => entry.memberId),
       completions: completions
         .filter((completion) => completion.taskId === task.id)
         .map(({ id, doneOn, memberId, createdAt }) => ({ id, doneOn, memberId, createdAt: createdAt.toISOString() })),
@@ -44,14 +46,21 @@ export class PostgresTaskRepository implements TaskRepository {
   }
 
   async add(householdId: string, task: RecurringTask) {
-    await this.database.insert(recurringTasks).values({
-      id: task.id,
-      householdId,
-      title: task.title,
-      intervalCount: task.interval.every,
-      intervalUnit: task.interval.unit,
-      firstDueOn: task.firstDueOn,
-      createdAt: new Date(task.createdAt),
+    await this.database.transaction(async (transaction) => {
+      await transaction.insert(recurringTasks).values({
+        id: task.id,
+        householdId,
+        title: task.title,
+        intervalCount: task.interval.every,
+        intervalUnit: task.interval.unit,
+        firstDueOn: task.firstDueOn,
+        createdAt: new Date(task.createdAt),
+      });
+      if (task.rotation.length > 0) {
+        await transaction
+          .insert(taskRotations)
+          .values(task.rotation.map((memberId, position) => ({ taskId: task.id, memberId, position })));
+      }
     });
   }
 
