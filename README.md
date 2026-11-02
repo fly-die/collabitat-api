@@ -81,6 +81,9 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
 | `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household"}` whenever someone in the household changes something |
+| `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
+| `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
+| `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
@@ -103,3 +106,7 @@ Fastify, TypeScript, PostgreSQL, Drizzle, Vitest.
 ## License
 
 [MIT](LICENSE). Logo uses the "cottage" icon from [Material Symbols](https://github.com/google/material-design-icons) (Apache 2.0).
+
+## Notifications
+
+Set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (create them with `npx web-push generate-vapid-keys`) to send notifications: a morning reminder when a chore is your turn, and a note when a flatmate adds an expense you share. Without them, notifications are off.
