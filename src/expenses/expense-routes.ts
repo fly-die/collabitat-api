@@ -4,7 +4,7 @@ import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import { ExpenseError, ExpenseErrorCode } from "./expense-errors.js";
 import type { ExpenseRepository } from "./expense-repository.js";
-import { MAX_DESCRIPTION_LENGTH, calculateBalances, createExpense, editExpense, type NewExpense } from "./expense.js";
+import { MAX_DESCRIPTION_LENGTH, calculateBalances, createExpense, editExpense, type Expense, type NewExpense } from "./expense.js";
 import type { SettlementRepository } from "./settlement-repository.js";
 import { createSettlement, simplifyDebts, type NewSettlement } from "./settlement.js";
 
@@ -57,9 +57,16 @@ export interface ExpenseRouteDependencies {
   authenticate: Authenticate;
   expenseRepository: ExpenseRepository;
   settlementRepository: SettlementRepository;
+  // Called after a new expense is saved, e.g. to tell the flatmates who share it.
+  onExpenseAdded?: (household: Household, expense: Expense, addedByMemberId: string) => void;
 }
 
-export function expenseRoutes({ authenticate, expenseRepository, settlementRepository }: ExpenseRouteDependencies) {
+export function expenseRoutes({
+  authenticate,
+  expenseRepository,
+  settlementRepository,
+  onExpenseAdded,
+}: ExpenseRouteDependencies) {
   // Every change answers with the whole money view, so the app never shows stale balances.
   async function moneyView(household: Household) {
     const [expenses, settlements] = await Promise.all([
@@ -80,8 +87,10 @@ export function expenseRoutes({ authenticate, expenseRepository, settlementRepos
       "/household/expenses",
       { schema: { body: newExpenseBodySchema } },
       async (request, reply) => {
-        const { household } = await authenticate(request);
-        await expenseRepository.add(household.id, createExpense(household, request.body));
+        const { household, currentMemberId } = await authenticate(request);
+        const expense = createExpense(household, request.body);
+        await expenseRepository.add(household.id, expense);
+        onExpenseAdded?.(household, expense, currentMemberId);
         return reply.status(HttpStatus.Created).send(await moneyView(household));
       },
     );

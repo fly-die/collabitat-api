@@ -27,6 +27,17 @@ import { householdViews } from "./households/household-view.js";
 import { healthRoutes } from "./routes/health.js";
 import { LiveHub, topicOfPath } from "./live/live-hub.js";
 import { liveRoutes } from "./live/live-routes.js";
+import { startChoreReminders } from "./notifications/chore-reminders.js";
+import { expenseAddedMessages } from "./notifications/expense-notifications.js";
+import { notificationRoutes } from "./notifications/notification-routes.js";
+import { createNotifier } from "./notifications/notifier.js";
+import type { PushSender } from "./notifications/push-sender.js";
+import {
+  InMemoryPushSubscriptionRepository,
+  InMemoryReminderLog,
+  type PushSubscriptionRepository,
+  type ReminderLog,
+} from "./notifications/push-subscription-repository.js";
 import { createAuthenticator, createTokenAuthenticator, type Authenticate } from "./sessions/authenticate.js";
 import { InMemoryTaskRepository, type TaskRepository } from "./tasks/task-repository.js";
 import { taskRoutes } from "./tasks/task-routes.js";
@@ -42,6 +53,12 @@ export interface AppDependencies {
   accountRepository?: AccountRepository;
   settlementRepository?: SettlementRepository;
   taskRepository?: TaskRepository;
+  pushSubscriptionRepository?: PushSubscriptionRepository;
+  reminderLog?: ReminderLog;
+  // Without one, notifications are off: the switch says so and nothing is sent.
+  pushSender?: PushSender;
+  // Only the real server sends the morning chore reminders; tests call them directly.
+  sendsChoreReminders?: boolean;
   webOrigins?: string[];
 }
 
@@ -56,6 +73,10 @@ export function buildApp({
   accountRepository = new InMemoryAccountRepository(),
   settlementRepository = new InMemorySettlementRepository(),
   taskRepository = new InMemoryTaskRepository(),
+  pushSubscriptionRepository = new InMemoryPushSubscriptionRepository(),
+  reminderLog = new InMemoryReminderLog(),
+  pushSender,
+  sendsChoreReminders = false,
   webOrigins = [],
 }: AppDependencies = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
@@ -105,7 +126,32 @@ export function buildApp({
   app.register(
     accountRoutes({ authenticate, accounts, accountRepository, householdRepository, sessionRepository, views }),
   );
-  app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository }));
+  const notify = createNotifier(pushSubscriptionRepository, pushSender, app.log);
+  app.register(
+    expenseRoutes({
+      authenticate,
+      expenseRepository,
+      settlementRepository,
+      onExpenseAdded: (household, expense, addedByMemberId) => {
+        for (const { memberId, message } of expenseAddedMessages(household, expense, addedByMemberId)) {
+          void notify([memberId], message);
+        }
+      },
+    }),
+  );
+  app.register(
+    notificationRoutes({ authenticate, subscriptions: pushSubscriptionRepository, publicKey: pushSender?.publicKey }),
+  );
+  if (sendsChoreReminders && pushSender) {
+    let stopReminders: (() => void) | undefined;
+    app.addHook("onReady", async () => {
+      stopReminders = startChoreReminders(
+        { householdRepository, taskRepository, subscriptions: pushSubscriptionRepository, reminderLog, notify },
+        app.log,
+      );
+    });
+    app.addHook("onClose", async () => stopReminders?.());
+  }
   app.register(taskRoutes({ authenticate, taskRepository }));
   app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;

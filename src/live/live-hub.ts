@@ -11,6 +11,10 @@ type Listener = (topic: LiveTopic) => void;
 // Which part of the app a change belongs to, so screens only reload what changed.
 export function topicOfPath(url: string): LiveTopic | undefined {
   const path = url.split("?")[0];
+  // A device turning notifications on or off changes nothing anyone else sees.
+  if (path.startsWith("/household/push-subscription")) {
+    return undefined;
+  }
   if (path.startsWith("/household/expenses") || path.startsWith("/household/settlements")) {
     return LiveTopic.Money;
   }

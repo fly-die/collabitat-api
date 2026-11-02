@@ -3,6 +3,7 @@ import { AccountError, AccountErrorCode } from "./accounts/account-errors.js";
 import { ExpenseError, ExpenseErrorCode } from "./expenses/expense-errors.js";
 import { HouseholdError, HouseholdErrorCode } from "./households/household-errors.js";
 import { HttpStatus } from "./http-status.js";
+import { NotificationError, NotificationErrorCode } from "./notifications/push-subscription.js";
 import { TaskError, TaskErrorCode } from "./tasks/task-errors.js";
 
 const STATUS_BY_HOUSEHOLD_ERROR: Record<HouseholdErrorCode, number> = {
@@ -37,6 +38,11 @@ const STATUS_BY_EXPENSE_ERROR: Record<ExpenseErrorCode, number> = {
   [ExpenseErrorCode.SettlementNotFound]: HttpStatus.NotFound,
 };
 
+const STATUS_BY_NOTIFICATION_ERROR: Record<NotificationErrorCode, number> = {
+  [NotificationErrorCode.InvalidSubscription]: HttpStatus.BadRequest,
+  [NotificationErrorCode.PushDisabled]: HttpStatus.NotFound,
+};
+
 const STATUS_BY_TASK_ERROR: Record<TaskErrorCode, number> = {
   [TaskErrorCode.InvalidTitle]: HttpStatus.BadRequest,
   [TaskErrorCode.InvalidInterval]: HttpStatus.BadRequest,
@@ -55,14 +61,15 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
-type DomainError = HouseholdError | ExpenseError | AccountError | TaskError;
+type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError;
 
 function isDomainError(error: unknown): error is DomainError {
   return (
     error instanceof HouseholdError ||
     error instanceof ExpenseError ||
     error instanceof AccountError ||
-    error instanceof TaskError
+    error instanceof TaskError ||
+    error instanceof NotificationError
   );
 }
 
@@ -72,6 +79,9 @@ function statusOf(error: DomainError) {
   }
   if (error instanceof TaskError) {
     return STATUS_BY_TASK_ERROR[error.code];
+  }
+  if (error instanceof NotificationError) {
+    return STATUS_BY_NOTIFICATION_ERROR[error.code];
   }
   return error instanceof AccountError
     ? STATUS_BY_ACCOUNT_ERROR[error.code]

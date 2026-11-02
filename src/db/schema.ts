@@ -164,3 +164,26 @@ export const taskRotations = pgTable(
   },
   (table) => [primaryKey({ columns: [table.taskId, table.memberId] })],
 );
+
+// One row per device that turned notifications on; leaving the household removes them.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  endpoint: text("endpoint").primaryKey(),
+  memberId: uuid("member_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Who already got the chore reminder on which day, so it goes out once even across restarts.
+export const choreRemindersSent = pgTable(
+  "chore_reminders_sent",
+  {
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    sentOn: date("sent_on", { mode: "string" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.memberId, table.sentOn] })],
+);
