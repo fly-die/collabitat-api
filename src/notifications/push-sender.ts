@@ -28,13 +28,17 @@ const TIME_TO_LIVE_SECONDS = 12 * 60 * 60;
 export class WebPushSender implements PushSender {
   readonly publicKey: string;
 
-  constructor(private readonly keys: VapidKeys) {
+  constructor(
+    private readonly keys: VapidKeys,
+    // The library's sender by default; tests hand in their own instead of reaching a push service.
+    private readonly sendNotification: typeof webpush.sendNotification = webpush.sendNotification,
+  ) {
     this.publicKey = keys.publicKey;
   }
 
   async send(subscription: PushSubscription, message: PushMessage): Promise<PushResult> {
     try {
-      await webpush.sendNotification(subscription, JSON.stringify(message), {
+      await this.sendNotification(subscription, JSON.stringify(message), {
         vapidDetails: this.keys,
         TTL: TIME_TO_LIVE_SECONDS,
       });

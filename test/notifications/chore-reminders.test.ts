@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { addMember, createHousehold } from "../../src/households/household.js";
 import { InMemoryHouseholdRepository } from "../../src/households/household-repository.js";
-import { choreReminder, sendChoreReminders, zurichDayAndHour } from "../../src/notifications/chore-reminders.js";
+import { choreReminder, sendChoreReminders, startChoreReminders, zurichDayAndHour } from "../../src/notifications/chore-reminders.js";
 import type { PushMessage } from "../../src/notifications/push-sender.js";
 import {
   InMemoryPushSubscriptionRepository,
@@ -72,5 +72,29 @@ describe("chore reminders", () => {
     [["Trash", "Bathroom", "Hallway", "Kettle"], "4 chores are your turn today", "Trash, Bathroom, Hallway and 1 more"],
   ])("sums up several chores: %j", (titles, title, body) => {
     expect(choreReminder(titles, "2026-11-02")).toEqual({ title, body, tag: "chores-2026-11-02" });
+  });
+});
+
+describe("chore reminder schedule", () => {
+  it("checks right away, keeps checking, and logs instead of crashing when a check fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(MONDAY_MORNING);
+    const { dependencies, sent } = await flatWithChores(["Take out the trash"]);
+    const brokenSubscriptions = Object.assign(new InMemoryPushSubscriptionRepository(), {
+      listAll: vi.fn().mockRejectedValue(new Error("db down")),
+    });
+    const failing = { ...dependencies, subscriptions: brokenSubscriptions };
+    const logger = { warn: vi.fn() };
+
+    const stop = startChoreReminders(dependencies, logger);
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    stop();
+
+    const stopFailing = startChoreReminders(failing, logger);
+    await vi.waitFor(() => expect(logger.warn).toHaveBeenCalledOnce());
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    expect(failing.subscriptions.listAll).toHaveBeenCalledTimes(2);
+    stopFailing();
+    vi.useRealTimers();
   });
 });
