@@ -80,6 +80,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/tasks/:taskId` | Delete a chore |
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
+| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household"}` whenever someone in the household changes something |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 

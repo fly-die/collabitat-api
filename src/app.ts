@@ -1,6 +1,7 @@
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import rateLimit from "@fastify/rate-limit";
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import {
   InMemoryAccountRepository,
   type AccountRepository,
@@ -24,7 +25,9 @@ import {
 } from "./households/household-repository.js";
 import { householdViews } from "./households/household-view.js";
 import { healthRoutes } from "./routes/health.js";
-import { createAuthenticator } from "./sessions/authenticate.js";
+import { LiveHub, topicOfPath } from "./live/live-hub.js";
+import { liveRoutes } from "./live/live-routes.js";
+import { createAuthenticator, createTokenAuthenticator, type Authenticate } from "./sessions/authenticate.js";
 import { InMemoryTaskRepository, type TaskRepository } from "./tasks/task-repository.js";
 import { taskRoutes } from "./tasks/task-routes.js";
 import {
@@ -42,6 +45,10 @@ export interface AppDependencies {
   webOrigins?: string[];
 }
 
+const HTTP_ERROR_STATUS = 400;
+// The only message a client sends is its session token.
+const LIVE_MAX_MESSAGE_BYTES = 4096;
+
 export function buildApp({
   householdRepository = new InMemoryHouseholdRepository(),
   sessionRepository = new InMemorySessionRepository(),
@@ -52,11 +59,28 @@ export function buildApp({
   webOrigins = [],
 }: AppDependencies = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-  const authenticate = createAuthenticator(householdRepository, sessionRepository);
+  const liveHub = new LiveHub();
+  const authenticateToken = createTokenAuthenticator(householdRepository, sessionRepository);
+  // Remembers whose request it was, so a successful change can be announced to that household.
+  const householdOfRequest = new WeakMap<FastifyRequest, string>();
+  const checkSession = createAuthenticator(householdRepository, sessionRepository);
+  const authenticate: Authenticate = async (request) => {
+    const session = await checkSession(request);
+    householdOfRequest.set(request, session.household.id);
+    return session;
+  };
   const accounts = accountService(accountRepository);
   const views = householdViews(accountRepository, sessionRepository);
 
   registerErrorHandler(app);
+  app.addHook("onResponse", async (request, reply) => {
+    const householdId = householdOfRequest.get(request);
+    const topic = topicOfPath(request.url);
+    if (request.method !== "GET" && reply.statusCode < HTTP_ERROR_STATUS && householdId && topic) {
+      liveHub.publish(householdId, topic);
+    }
+  });
+  app.register(websocket, { options: { maxPayload: LIVE_MAX_MESSAGE_BYTES } });
   app.register(cors, {
     origin: webOrigins,
     methods: ["GET", "POST", "PUT", "DELETE"],
@@ -83,5 +107,6 @@ export function buildApp({
   );
   app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository }));
   app.register(taskRoutes({ authenticate, taskRepository }));
+  app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;
 }
