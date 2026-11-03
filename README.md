@@ -84,6 +84,11 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
+| `GET` | `/household/meals?from=YYYY-MM-DD` | Seven days of dinners from that day, and the saved recipes |
+| `PUT` | `/household/meals/:date?from=...` | Plan a day's dinner: `title` and/or `recipeId`, optional `cookMemberId` |
+| `DELETE` | `/household/meals/:date?from=...` | Clear a day |
+| `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
+| `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
