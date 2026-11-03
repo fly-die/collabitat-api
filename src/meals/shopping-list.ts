@@ -56,12 +56,25 @@ const GRAMS_PER_KILO = 1000;
 const MILLILITRES_PER_LITRE = 1000;
 const MILLILITRES_PER_DECILITRE = 100;
 
+// How units read on the list, for one and for more than one.
+const UNIT_LABELS: Record<string, [string, string]> = {
+  dose: ["Dose", "Dosen"], zehe: ["Zehe", "Zehen"], pack: ["Pack", "Packs"], prise: ["Prise", "Prisen"],
+  bund: ["Bund", "Bund"], tl: ["TL", "TL"], el: ["EL", "EL"], cup: ["cup", "cups"], pinch: ["pinch", "pinches"],
+};
+// Plural endings in German and English: "Zwiebel" and "Zwiebeln", "onion" and "onions" are one item.
+const PLURAL_ENDINGS = ["n", "en", "e", "s", "es"];
+// Shorter words are left alone, so "Ei" and "Eis" stay apart.
+const SHORTEST_WORD_WITH_PLURAL = 4;
+
+const unitLabel = (unit: string | null, quantity: number | null) =>
+  unit && UNIT_LABELS[unit] ? UNIT_LABELS[unit][quantity === 1 ? 0 : 1] : unit;
+
 const canonicalUnit = (unit: string | null) => (unit !== null && unit in UNIT_SYNONYMS ? UNIT_SYNONYMS[unit] : unit);
 const rounded = (value: number) => Number(value.toFixed(2));
 
 function display(quantity: number | null, unit: string | null) {
   if (quantity === null || (unit !== "g" && unit !== "ml")) {
-    return { quantity: quantity === null ? null : rounded(quantity), unit };
+    return { quantity: quantity === null ? null : rounded(quantity), unit: unitLabel(unit, quantity) };
   }
   if (unit === "g") {
     return quantity >= GRAMS_PER_KILO ? { quantity: rounded(quantity / GRAMS_PER_KILO), unit: "kg" } : { quantity: rounded(quantity), unit };
@@ -113,7 +126,31 @@ function mergeNeeds(needs: Need[]) {
       merged.set(key, { name: ingredient.name, quantity, unit: base?.base ?? unit, forDinners: [dinner] });
     }
   }
-  return [...merged.values()];
+  return mergePlurals([...merged.entries()]);
+}
+
+type Merged = { name: string; quantity: number | null; unit: string | null; forDinners: string[] };
+
+// A second pass joins singular and plural of the same thing in the same unit, keeping the plural's name.
+function mergePlurals(entries: [string, Merged][]) {
+  const byKey = new Map(entries);
+  for (const [key, item] of entries) {
+    const [name, unit] = key.split("|");
+    if (!byKey.has(key) || name.length < SHORTEST_WORD_WITH_PLURAL) {
+      continue;
+    }
+    for (const ending of PLURAL_ENDINGS) {
+      const pluralKey = `${name}${ending}|${unit}`;
+      const plural = byKey.get(pluralKey);
+      if (plural && pluralKey !== key) {
+        plural.quantity = plural.quantity === null || item.quantity === null ? (plural.quantity ?? item.quantity) : plural.quantity + item.quantity;
+        plural.forDinners.push(...item.forDinners.filter((dinner) => !plural.forDinners.includes(dinner)));
+        byKey.delete(key);
+        break;
+      }
+    }
+  }
+  return [...byKey.values()];
 }
 
 const byShopOrder = (first: ShoppingItem, second: ShoppingItem) =>

@@ -38,7 +38,23 @@ describe("shopping list", () => {
       ["Rahm", 1, "l", "dairy", ["Pasta", "Lasagne"], null],
       ["pasta", 1.25, "kg", "pantry", ["Pasta", "Lasagne"], null],
       ["Salt", null, null, "pantry", ["Pasta", "Lasagne"], null],
-      ["Tomaten", 3, "dose", "pantry", ["Pasta", "Lasagne"], null],
+      ["Tomaten", 3, "Dosen", "pantry", ["Pasta", "Lasagne"], null],
+    ]);
+  });
+
+  it("joins singular and plural, and labels units for one or more", () => {
+    const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["1 Zwiebel", "1 Dose Tomaten", "2 Zehen Knoblauch", "1 Ei"] });
+    const curry = createRecipe({ title: "Curry", servings: 4, ingredientLines: ["2 Zwiebeln", "1 onion", "2 onions", "1 zehe Knoblauch", "Eis"] });
+
+    const list = buildShoppingList([dinner("2026-11-02", "Pasta", pasta.id), dinner("2026-11-03", "Curry", curry.id)], [pasta, curry], []);
+
+    expect(list.map(({ name, quantity, unit }) => [quantity, unit, name].filter((part) => part !== null).join(" "))).toEqual([
+      "3 Zehen Knoblauch",
+      "3 onions",
+      "3 Zwiebeln",
+      "1 Ei",
+      "1 Dose Tomaten",
+      "Eis",
     ]);
   });
 
