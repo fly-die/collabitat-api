@@ -219,3 +219,17 @@ export const plannedMeals = pgTable(
   },
   (table) => [primaryKey({ columns: [table.householdId, table.date] })],
 );
+
+// Items added to the shopping list by hand, as typed ("2 l milk").
+export const shoppingItems = pgTable(
+  "shopping_items",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    line: text("line").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("shopping_items_household_id_idx").on(table.householdId)],
+);

@@ -22,7 +22,7 @@ export function topicOfPath(url: string): LiveTopic | undefined {
   if (path.startsWith("/household/tasks")) {
     return LiveTopic.Chores;
   }
-  if (path.startsWith("/household/meals") || path.startsWith("/household/recipes")) {
+  if (["/household/meals", "/household/recipes", "/household/shopping-list"].some((prefix) => path.startsWith(prefix))) {
     return LiveTopic.Meals;
   }
   return path === "/household" || path.startsWith("/household/") ? LiveTopic.Household : undefined;

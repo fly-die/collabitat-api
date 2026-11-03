@@ -29,6 +29,8 @@ import { LiveHub, topicOfPath } from "./live/live-hub.js";
 import { liveRoutes } from "./live/live-routes.js";
 import { InMemoryMealRepository, type MealRepository } from "./meals/meal-repository.js";
 import { mealRoutes } from "./meals/meal-routes.js";
+import { InMemoryShoppingItemRepository, type ShoppingItemRepository } from "./meals/shopping-item-repository.js";
+import { shoppingRoutes } from "./meals/shopping-routes.js";
 import { startChoreReminders } from "./notifications/chore-reminders.js";
 import { expenseAddedMessages } from "./notifications/expense-notifications.js";
 import { notificationRoutes } from "./notifications/notification-routes.js";
@@ -56,6 +58,7 @@ export interface AppDependencies {
   settlementRepository?: SettlementRepository;
   taskRepository?: TaskRepository;
   mealRepository?: MealRepository;
+  shoppingItemRepository?: ShoppingItemRepository;
   pushSubscriptionRepository?: PushSubscriptionRepository;
   reminderLog?: ReminderLog;
   // Without one, notifications are off: the switch says so and nothing is sent.
@@ -77,6 +80,7 @@ export function buildApp({
   settlementRepository = new InMemorySettlementRepository(),
   taskRepository = new InMemoryTaskRepository(),
   mealRepository = new InMemoryMealRepository(),
+  shoppingItemRepository = new InMemoryShoppingItemRepository(),
   pushSubscriptionRepository = new InMemoryPushSubscriptionRepository(),
   reminderLog = new InMemoryReminderLog(),
   pushSender,
@@ -158,6 +162,7 @@ export function buildApp({
   }
   app.register(taskRoutes({ authenticate, taskRepository }));
   app.register(mealRoutes({ authenticate, mealRepository }));
+  app.register(shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository }));
   app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;
 }
