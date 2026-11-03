@@ -89,6 +89,9 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/meals/:date?from=...` | Clear a day |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
+| `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category |
+| `POST` | `/household/shopping-list/items?from=...` | Add an item by hand: `{"line": "2 l milk"}` |
+| `DELETE` | `/household/shopping-list/items/:itemId?from=...` | Remove an item added by hand |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
