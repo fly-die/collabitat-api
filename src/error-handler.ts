@@ -3,6 +3,7 @@ import { AccountError, AccountErrorCode } from "./accounts/account-errors.js";
 import { ExpenseError, ExpenseErrorCode } from "./expenses/expense-errors.js";
 import { HouseholdError, HouseholdErrorCode } from "./households/household-errors.js";
 import { HttpStatus } from "./http-status.js";
+import { MealError, MealErrorCode } from "./meals/meal-plan.js";
 import { NotificationError, NotificationErrorCode } from "./notifications/push-subscription.js";
 import { TaskError, TaskErrorCode } from "./tasks/task-errors.js";
 
@@ -38,6 +39,16 @@ const STATUS_BY_EXPENSE_ERROR: Record<ExpenseErrorCode, number> = {
   [ExpenseErrorCode.SettlementNotFound]: HttpStatus.NotFound,
 };
 
+const STATUS_BY_MEAL_ERROR: Record<MealErrorCode, number> = {
+  [MealErrorCode.InvalidTitle]: HttpStatus.BadRequest,
+  [MealErrorCode.InvalidServings]: HttpStatus.BadRequest,
+  [MealErrorCode.InvalidIngredients]: HttpStatus.BadRequest,
+  [MealErrorCode.InvalidDate]: HttpStatus.BadRequest,
+  [MealErrorCode.UnknownRecipe]: HttpStatus.BadRequest,
+  [MealErrorCode.UnknownCook]: HttpStatus.BadRequest,
+  [MealErrorCode.RecipeNotFound]: HttpStatus.NotFound,
+};
+
 const STATUS_BY_NOTIFICATION_ERROR: Record<NotificationErrorCode, number> = {
   [NotificationErrorCode.InvalidSubscription]: HttpStatus.BadRequest,
   [NotificationErrorCode.PushDisabled]: HttpStatus.NotFound,
@@ -61,7 +72,7 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
-type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError;
+type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError | MealError;
 
 function isDomainError(error: unknown): error is DomainError {
   return (
@@ -69,7 +80,8 @@ function isDomainError(error: unknown): error is DomainError {
     error instanceof ExpenseError ||
     error instanceof AccountError ||
     error instanceof TaskError ||
-    error instanceof NotificationError
+    error instanceof NotificationError ||
+    error instanceof MealError
   );
 }
 
@@ -82,6 +94,9 @@ function statusOf(error: DomainError) {
   }
   if (error instanceof NotificationError) {
     return STATUS_BY_NOTIFICATION_ERROR[error.code];
+  }
+  if (error instanceof MealError) {
+    return STATUS_BY_MEAL_ERROR[error.code];
   }
   return error instanceof AccountError
     ? STATUS_BY_ACCOUNT_ERROR[error.code]

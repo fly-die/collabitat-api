@@ -2,6 +2,7 @@ export const LiveTopic = {
   Money: "money",
   Chores: "chores",
   Household: "household",
+  Meals: "meals",
 } as const;
 
 export type LiveTopic = (typeof LiveTopic)[keyof typeof LiveTopic];
@@ -20,6 +21,9 @@ export function topicOfPath(url: string): LiveTopic | undefined {
   }
   if (path.startsWith("/household/tasks")) {
     return LiveTopic.Chores;
+  }
+  if (path.startsWith("/household/meals") || path.startsWith("/household/recipes")) {
+    return LiveTopic.Meals;
   }
   return path === "/household" || path.startsWith("/household/") ? LiveTopic.Household : undefined;
 }

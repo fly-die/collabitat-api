@@ -1,5 +1,6 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./config.js";
+import { PostgresMealRepository } from "./meals/postgres-meal-repository.js";
 import { WebPushSender } from "./notifications/push-sender.js";
 import {
   PostgresPushSubscriptionRepository,
@@ -23,6 +24,7 @@ const app = buildApp({
   accountRepository: database ? new PostgresAccountRepository(database.database) : undefined,
   settlementRepository: database ? new PostgresSettlementRepository(database.database) : undefined,
   taskRepository: database ? new PostgresTaskRepository(database.database) : undefined,
+  mealRepository: database ? new PostgresMealRepository(database.database) : undefined,
   pushSubscriptionRepository: database ? new PostgresPushSubscriptionRepository(database.database) : undefined,
   reminderLog: database ? new PostgresReminderLog(database.database) : undefined,
   pushSender: config.vapidKeys ? new WebPushSender(config.vapidKeys) : undefined,

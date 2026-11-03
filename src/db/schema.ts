@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -186,4 +187,35 @@ export const choreRemindersSent = pgTable(
     sentOn: date("sent_on", { mode: "string" }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.memberId, table.sentOn] })],
+);
+
+export const recipes = pgTable(
+  "recipes",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    servings: integer("servings").notNull(),
+    // Parsed lines ({ quantity, unit, name }); the shopping list reads them, nothing queries inside.
+    ingredients: jsonb("ingredients").$type<{ quantity: number | null; unit: string | null; name: string }[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("recipes_household_id_idx").on(table.householdId)],
+);
+
+// One dinner per household and day; it keeps its title when the recipe or the cook goes.
+export const plannedMeals = pgTable(
+  "planned_meals",
+  {
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    title: text("title").notNull(),
+    recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
+    cookMemberId: uuid("cook_member_id").references(() => members.id, { onDelete: "set null" }),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.date] })],
 );
