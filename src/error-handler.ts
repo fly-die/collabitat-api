@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { AccountError, AccountErrorCode } from "./accounts/account-errors.js";
 import { CalendarError, CalendarErrorCode } from "./calendar/calendar.js";
+import { NoteError, NoteErrorCode } from "./notes/note.js";
 import { ExpenseError, ExpenseErrorCode } from "./expenses/expense-errors.js";
 import { HouseholdError, HouseholdErrorCode } from "./households/household-errors.js";
 import { HttpStatus } from "./http-status.js";
@@ -75,6 +76,11 @@ const STATUS_BY_CALENDAR_ERROR: Record<CalendarErrorCode, number> = {
   [CalendarErrorCode.EntryNotFound]: HttpStatus.NotFound,
 };
 
+const STATUS_BY_NOTE_ERROR: Record<NoteErrorCode, number> = {
+  [NoteErrorCode.InvalidText]: HttpStatus.BadRequest,
+  [NoteErrorCode.NoteNotFound]: HttpStatus.NotFound,
+};
+
 export class TooManyAttemptsError extends Error {
   readonly code = "TOO_MANY_ATTEMPTS";
 
@@ -84,7 +90,7 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
-type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError | MealError | CalendarError;
+type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError | MealError | CalendarError | NoteError;
 
 function isDomainError(error: unknown): error is DomainError {
   return (
@@ -94,7 +100,8 @@ function isDomainError(error: unknown): error is DomainError {
     error instanceof TaskError ||
     error instanceof NotificationError ||
     error instanceof MealError ||
-    error instanceof CalendarError
+    error instanceof CalendarError ||
+    error instanceof NoteError
   );
 }
 
@@ -113,6 +120,9 @@ function statusOf(error: DomainError) {
   }
   if (error instanceof CalendarError) {
     return STATUS_BY_CALENDAR_ERROR[error.code];
+  }
+  if (error instanceof NoteError) {
+    return STATUS_BY_NOTE_ERROR[error.code];
   }
   return error instanceof AccountError
     ? STATUS_BY_ACCOUNT_ERROR[error.code]

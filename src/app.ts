@@ -34,6 +34,8 @@ import { shoppingRoutes } from "./meals/shopping-routes.js";
 import { InMemoryShoppingTripRepository, type ShoppingTripRepository } from "./meals/shopping-trip-repository.js";
 import { InMemoryCalendarRepository, type CalendarRepository } from "./calendar/calendar-repository.js";
 import { calendarRoutes } from "./calendar/calendar-routes.js";
+import { InMemoryNoteRepository, type NoteRepository } from "./notes/note-repository.js";
+import { noteRoutes } from "./notes/note-routes.js";
 import { startChoreReminders } from "./notifications/chore-reminders.js";
 import { expenseAddedMessages } from "./notifications/expense-notifications.js";
 import { notificationRoutes } from "./notifications/notification-routes.js";
@@ -64,6 +66,7 @@ export interface AppDependencies {
   shoppingItemRepository?: ShoppingItemRepository;
   shoppingTripRepository?: ShoppingTripRepository;
   calendarRepository?: CalendarRepository;
+  noteRepository?: NoteRepository;
   pushSubscriptionRepository?: PushSubscriptionRepository;
   reminderLog?: ReminderLog;
   // Without one, notifications are off: the switch says so and nothing is sent.
@@ -88,6 +91,7 @@ export function buildApp({
   shoppingItemRepository = new InMemoryShoppingItemRepository(),
   shoppingTripRepository = new InMemoryShoppingTripRepository(),
   calendarRepository = new InMemoryCalendarRepository(),
+  noteRepository = new InMemoryNoteRepository(),
   pushSubscriptionRepository = new InMemoryPushSubscriptionRepository(),
   reminderLog = new InMemoryReminderLog(),
   pushSender,
@@ -168,6 +172,7 @@ export function buildApp({
     shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, expenseRepository, onExpenseAdded }),
   );
   app.register(calendarRoutes({ authenticate, calendarRepository }));
+  app.register(noteRoutes({ authenticate, noteRepository }));
   app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;
 }

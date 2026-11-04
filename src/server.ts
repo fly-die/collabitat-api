@@ -4,6 +4,7 @@ import { PostgresMealRepository } from "./meals/postgres-meal-repository.js";
 import { PostgresShoppingItemRepository } from "./meals/shopping-item-repository.js";
 import { PostgresShoppingTripRepository } from "./meals/shopping-trip-repository.js";
 import { PostgresCalendarRepository } from "./calendar/calendar-repository.js";
+import { PostgresNoteRepository } from "./notes/note-repository.js";
 import { WebPushSender } from "./notifications/push-sender.js";
 import {
   PostgresPushSubscriptionRepository,
@@ -31,6 +32,7 @@ const app = buildApp({
   shoppingItemRepository: database ? new PostgresShoppingItemRepository(database.database) : undefined,
   shoppingTripRepository: database ? new PostgresShoppingTripRepository(database.database) : undefined,
   calendarRepository: database ? new PostgresCalendarRepository(database.database) : undefined,
+  noteRepository: database ? new PostgresNoteRepository(database.database) : undefined,
   pushSubscriptionRepository: database ? new PostgresPushSubscriptionRepository(database.database) : undefined,
   reminderLog: database ? new PostgresReminderLog(database.database) : undefined,
   pushSender: config.vapidKeys ? new WebPushSender(config.vapidKeys) : undefined,

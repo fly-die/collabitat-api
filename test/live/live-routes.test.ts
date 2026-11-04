@@ -65,6 +65,7 @@ describe("live updates", () => {
     ["/household/shopping-trip?from=2026-11-02", [LiveTopic.Meals]],
     ["/household/shopping-trip/checkout?from=2026-11-02", [LiveTopic.Meals, LiveTopic.Money]],
     ["/household/calendar/entries/abc", [LiveTopic.Calendar]],
+    ["/household/notes/done", [LiveTopic.Notes]],
     ["/household/members", [LiveTopic.Household]],
     ["/household?x=1", [LiveTopic.Household]],
     ["/households", []],

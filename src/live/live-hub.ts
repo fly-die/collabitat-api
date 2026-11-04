@@ -4,6 +4,7 @@ export const LiveTopic = {
   Household: "household",
   Meals: "meals",
   Calendar: "calendar",
+  Notes: "notes",
 } as const;
 
 export type LiveTopic = (typeof LiveTopic)[keyof typeof LiveTopic];
@@ -27,6 +28,9 @@ export function topicsOfPath(url: string): LiveTopic[] {
   }
   if (path.startsWith("/household/calendar")) {
     return [LiveTopic.Calendar];
+  }
+  if (path.startsWith("/household/notes")) {
+    return [LiveTopic.Notes];
   }
   // Checking out ends the trip and adds the groceries to the money.
   if (path === CHECKOUT_PATH) {
