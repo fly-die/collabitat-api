@@ -289,3 +289,19 @@ export const calendarEntries = pgTable(
   },
   (table) => [index("calendar_entries_household_id_day_idx").on(table.householdId, table.day)],
 );
+
+// Quick notes shared by the household; a done note is a ticked-off todo.
+export const notes = pgTable(
+  "notes",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    authorMemberId: uuid("author_member_id").references(() => members.id, { onDelete: "set null" }),
+    doneAt: timestamp("done_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("notes_household_id_idx").on(table.householdId)],
+);

@@ -85,6 +85,13 @@
       "when": 1793794665378,
       "tag": "0011_calendar",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793794779260,
+      "tag": "0012_notes",
+      "breakpoints": true
     }
   ]
 }
