@@ -9,23 +9,29 @@ export type LiveTopic = (typeof LiveTopic)[keyof typeof LiveTopic];
 
 type Listener = (topic: LiveTopic) => void;
 
-// Which part of the app a change belongs to, so screens only reload what changed.
-export function topicOfPath(url: string): LiveTopic | undefined {
+const CHECKOUT_PATH = "/household/shopping-trip/checkout";
+
+// Which parts of the app a change belongs to, so screens only reload what changed.
+export function topicsOfPath(url: string): LiveTopic[] {
   const path = url.split("?")[0];
   // A device turning notifications on or off changes nothing anyone else sees.
   if (path.startsWith("/household/push-subscription")) {
-    return undefined;
+    return [];
   }
   if (path.startsWith("/household/expenses") || path.startsWith("/household/settlements")) {
-    return LiveTopic.Money;
+    return [LiveTopic.Money];
   }
   if (path.startsWith("/household/tasks")) {
-    return LiveTopic.Chores;
+    return [LiveTopic.Chores];
   }
-  if (["/household/meals", "/household/recipes", "/household/shopping-list"].some((prefix) => path.startsWith(prefix))) {
-    return LiveTopic.Meals;
+  // Checking out ends the trip and adds the groceries to the money.
+  if (path === CHECKOUT_PATH) {
+    return [LiveTopic.Meals, LiveTopic.Money];
   }
-  return path === "/household" || path.startsWith("/household/") ? LiveTopic.Household : undefined;
+  if (["/household/meals", "/household/recipes", "/household/shopping-"].some((prefix) => path.startsWith(prefix))) {
+    return [LiveTopic.Meals];
+  }
+  return path === "/household" || path.startsWith("/household/") ? [LiveTopic.Household] : [];
 }
 
 // One process serves the whole app, so the open connections can live in memory.

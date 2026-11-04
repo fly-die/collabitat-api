@@ -96,6 +96,9 @@ export interface ShoppingItem {
   forDinners: string[];
   // Set for items added by hand, so they can be removed again.
   extraId: string | null;
+  // Stays the same while amounts change, so a ticked item stays ticked.
+  key: string;
+  checked: boolean;
 }
 
 export interface ExtraItem {
@@ -110,7 +113,7 @@ interface Need {
 }
 
 function mergeNeeds(needs: Need[]) {
-  const merged = new Map<string, { name: string; quantity: number | null; unit: string | null; forDinners: string[] }>();
+  const merged = new Map<string, Merged>();
   for (const { ingredient, dinner } of needs) {
     const unit = canonicalUnit(ingredient.unit);
     const base = unit ? BASE_UNITS[unit] : undefined;
@@ -123,13 +126,13 @@ function mergeNeeds(needs: Need[]) {
         existing.forDinners.push(dinner);
       }
     } else {
-      merged.set(key, { name: ingredient.name, quantity, unit: base?.base ?? unit, forDinners: [dinner] });
+      merged.set(key, { key, name: ingredient.name, quantity, unit: base?.base ?? unit, forDinners: [dinner] });
     }
   }
   return mergePlurals([...merged.entries()]);
 }
 
-type Merged = { name: string; quantity: number | null; unit: string | null; forDinners: string[] };
+type Merged = { key: string; name: string; quantity: number | null; unit: string | null; forDinners: string[] };
 
 // A second pass joins singular and plural of the same thing in the same unit, keeping the plural's name.
 function mergePlurals(entries: [string, Merged][]) {
@@ -156,8 +159,13 @@ function mergePlurals(entries: [string, Merged][]) {
 const byShopOrder = (first: ShoppingItem, second: ShoppingItem) =>
   CATEGORY_ORDER.indexOf(first.category) - CATEGORY_ORDER.indexOf(second.category) || first.name.localeCompare(second.name, "de-CH");
 
+const DINNER_KEY_PREFIX = "dinner:";
+const EXTRA_KEY_PREFIX = "extra:";
+export const extraItemKey = (extraId: string) => `${EXTRA_KEY_PREFIX}${extraId}`;
+
 // The week's list: every ingredient of every planned dinner that uses a recipe, added up, plus what was added by hand.
-export function buildShoppingList(meals: PlannedMeal[], recipes: Recipe[], extras: ExtraItem[]): ShoppingItem[] {
+export function buildShoppingList(meals: PlannedMeal[], recipes: Recipe[], extras: ExtraItem[], checkedKeys: string[] = []): ShoppingItem[] {
+  const checked = new Set(checkedKeys);
   const needs = meals.flatMap((meal) => {
     const recipe = recipes.find((candidate) => candidate.id === meal.recipeId);
     return (recipe?.ingredients ?? []).map((ingredient) => ({ ingredient, dinner: meal.title }));
@@ -168,11 +176,14 @@ export function buildShoppingList(meals: PlannedMeal[], recipes: Recipe[], extra
     category: categorize(need.name, need.unit),
     forDinners: need.forDinners,
     extraId: null,
+    key: `${DINNER_KEY_PREFIX}${need.key}`,
+    checked: checked.has(`${DINNER_KEY_PREFIX}${need.key}`),
   }));
   const addedByHand = extras.map((extra) => {
     const ingredient = parseIngredient(extra.line);
     const unit = canonicalUnit(ingredient.unit);
-    return { ...ingredient, unit, category: categorize(ingredient.name, unit), forDinners: [], extraId: extra.id };
+    const key = extraItemKey(extra.id);
+    return { ...ingredient, unit, category: categorize(ingredient.name, unit), forDinners: [], extraId: extra.id, key, checked: checked.has(key) };
   });
   return [...fromDinners, ...addedByHand].sort(byShopOrder);
 }

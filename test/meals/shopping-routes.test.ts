@@ -49,6 +49,25 @@ describe("shopping routes", () => {
     await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "Milch" });
     const other = await household(app, "seefeld");
 
-    expect((await call("GET", `/household/shopping-list?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", items: [] });
+    expect((await call("GET", `/household/shopping-list?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", trip: null, items: [] });
   });
+
+  it("shares a shopping trip and the ticks with the household until it ends", async () => {
+    await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "Zopf" });
+    const { currentMemberId } = (await call("GET", "/household")).json();
+    expect((await call("GET", "/household/shopping-trip")).json()).toEqual({ trip: null });
+
+    expect((await call("POST", `/household/shopping-trip?${WEEK}`)).statusCode).toBe(HttpStatus.Created);
+    const [zopf] = (await call("GET", "/household/shopping-trip")).json().items;
+    const ticked = await call("PUT", `/household/shopping-list/checks?${WEEK}`, { key: zopf.key, checked: true });
+
+    expect(ticked.json()).toEqual({
+      from: "2026-11-02",
+      trip: { shopperMemberId: currentMemberId, from: "2026-11-02", startedAt: expect.any(String) },
+      items: [expect.objectContaining({ name: "Zopf", checked: true })],
+    });
+    expect((await call("DELETE", `/household/shopping-trip?${WEEK}`)).json().trip).toBeNull();
+    expect((await call("GET", "/household/shopping-trip")).json()).toEqual({ trip: null });
+  });
+
 });

@@ -25,12 +25,13 @@ import {
 } from "./households/household-repository.js";
 import { householdViews } from "./households/household-view.js";
 import { healthRoutes } from "./routes/health.js";
-import { LiveHub, topicOfPath } from "./live/live-hub.js";
+import { LiveHub, topicsOfPath } from "./live/live-hub.js";
 import { liveRoutes } from "./live/live-routes.js";
 import { InMemoryMealRepository, type MealRepository } from "./meals/meal-repository.js";
 import { mealRoutes } from "./meals/meal-routes.js";
 import { InMemoryShoppingItemRepository, type ShoppingItemRepository } from "./meals/shopping-item-repository.js";
 import { shoppingRoutes } from "./meals/shopping-routes.js";
+import { InMemoryShoppingTripRepository, type ShoppingTripRepository } from "./meals/shopping-trip-repository.js";
 import { startChoreReminders } from "./notifications/chore-reminders.js";
 import { expenseAddedMessages } from "./notifications/expense-notifications.js";
 import { notificationRoutes } from "./notifications/notification-routes.js";
@@ -59,6 +60,7 @@ export interface AppDependencies {
   taskRepository?: TaskRepository;
   mealRepository?: MealRepository;
   shoppingItemRepository?: ShoppingItemRepository;
+  shoppingTripRepository?: ShoppingTripRepository;
   pushSubscriptionRepository?: PushSubscriptionRepository;
   reminderLog?: ReminderLog;
   // Without one, notifications are off: the switch says so and nothing is sent.
@@ -81,6 +83,7 @@ export function buildApp({
   taskRepository = new InMemoryTaskRepository(),
   mealRepository = new InMemoryMealRepository(),
   shoppingItemRepository = new InMemoryShoppingItemRepository(),
+  shoppingTripRepository = new InMemoryShoppingTripRepository(),
   pushSubscriptionRepository = new InMemoryPushSubscriptionRepository(),
   reminderLog = new InMemoryReminderLog(),
   pushSender,
@@ -104,9 +107,10 @@ export function buildApp({
   registerErrorHandler(app);
   app.addHook("onResponse", async (request, reply) => {
     const householdId = householdOfRequest.get(request);
-    const topic = topicOfPath(request.url);
-    if (request.method !== "GET" && reply.statusCode < HTTP_ERROR_STATUS && householdId && topic) {
-      liveHub.publish(householdId, topic);
+    if (request.method !== "GET" && reply.statusCode < HTTP_ERROR_STATUS && householdId) {
+      for (const topic of topicsOfPath(request.url)) {
+        liveHub.publish(householdId, topic);
+      }
     }
   });
   app.register(websocket, { options: { maxPayload: LIVE_MAX_MESSAGE_BYTES } });
@@ -162,7 +166,7 @@ export function buildApp({
   }
   app.register(taskRoutes({ authenticate, taskRepository }));
   app.register(mealRoutes({ authenticate, mealRepository }));
-  app.register(shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository }));
+  app.register(shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository }));
   app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;
 }

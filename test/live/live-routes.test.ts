@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.js";
-import { LiveTopic, topicOfPath } from "../../src/live/live-hub.js";
+import { LiveTopic, topicsOfPath } from "../../src/live/live-hub.js";
 import { CLOSE_UNAUTHORIZED, LIVE_PATH } from "../../src/live/live-routes.js";
 import { newCredentials } from "../support/credentials.js";
 
@@ -59,15 +59,17 @@ describe("live updates", () => {
   }
 
   it.each([
-    ["/household/expenses/abc", LiveTopic.Money],
-    ["/household/settlements", LiveTopic.Money],
-    ["/household/tasks/abc/completions", LiveTopic.Chores],
-    ["/household/members", LiveTopic.Household],
-    ["/household?x=1", LiveTopic.Household],
-    ["/households", undefined],
-    ["/health", undefined],
-  ])("files a change to %s under %s", (path, topic) => {
-    expect(topicOfPath(path)).toBe(topic);
+    ["/household/expenses/abc", [LiveTopic.Money]],
+    ["/household/settlements", [LiveTopic.Money]],
+    ["/household/tasks/abc/completions", [LiveTopic.Chores]],
+    ["/household/shopping-trip?from=2026-11-02", [LiveTopic.Meals]],
+    ["/household/shopping-trip/checkout?from=2026-11-02", [LiveTopic.Meals, LiveTopic.Money]],
+    ["/household/members", [LiveTopic.Household]],
+    ["/household?x=1", [LiveTopic.Household]],
+    ["/households", []],
+    ["/health", []],
+  ])("files a change to %s under %s", (path, topics) => {
+    expect(topicsOfPath(path)).toEqual(topics);
   });
 
   it("tells a household about its own changes, and only its own", async () => {

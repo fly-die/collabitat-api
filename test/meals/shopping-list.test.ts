@@ -65,4 +65,20 @@ describe("shopping list", () => {
 
     expect(list.map(({ name, quantity, unit }) => `${quantity} ${unit} ${name}`)).toEqual(["80 g butter", "50 ml cream", "3 dl stock"]);
   });
+
+  it("keeps an item ticked while more dinners add to it", () => {
+    const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta", "1 Zwiebel"] });
+    const lasagne = createRecipe({ title: "Lasagne", servings: 4, ingredientLines: ["1 kg Pasta", "2 Zwiebeln"] });
+    const extras = [{ id: "extra-1", line: "Zopf", createdAt: "2026-11-01T10:00:00Z" }];
+    const monday = buildShoppingList([dinner("2026-11-02", "Pasta", pasta.id)], [pasta], extras);
+    const ticked = monday.filter((item) => item.name !== "Zwiebel").map((item) => item.key);
+
+    const week = buildShoppingList([dinner("2026-11-02", "Pasta", pasta.id), dinner("2026-11-03", "Lasagne", lasagne.id)], [pasta, lasagne], extras, ticked);
+
+    expect(week.map(({ name, quantity, unit, checked }) => [name, quantity, unit, checked])).toEqual([
+      ["Zwiebeln", 3, null, false],
+      ["Zopf", null, null, true],
+      ["pasta", 1.5, "kg", true],
+    ]);
+  });
 });

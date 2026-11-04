@@ -233,3 +233,28 @@ export const shoppingItems = pgTable(
   },
   (table) => [index("shopping_items_household_id_idx").on(table.householdId)],
 );
+
+// Someone is at the shop with the list of one week; at most one trip per household.
+export const shoppingTrips = pgTable("shopping_trips", {
+  householdId: uuid("household_id")
+    .primaryKey()
+    .references(() => households.id, { onDelete: "cascade" }),
+  shopperMemberId: uuid("shopper_member_id")
+    .notNull()
+    .references(() => members.id, { onDelete: "cascade" }),
+  weekFrom: date("week_from", { mode: "string" }).notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Ticked items on a week's list, by item key, so they stay ticked while the list is rebuilt.
+export const shoppingChecks = pgTable(
+  "shopping_checks",
+  {
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    weekFrom: date("week_from", { mode: "string" }).notNull(),
+    itemKey: text("item_key").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.weekFrom, table.itemKey] })],
+);
