@@ -80,7 +80,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/tasks/:taskId` | Delete a chore |
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
-| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household" \| "meals" \| "calendar"}` whenever someone in the household changes something |
+| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household" \| "meals" \| "calendar" \| "notes"}` whenever someone in the household changes something |
 | `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
@@ -103,6 +103,11 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/household/calendar/entries` | Add a date: `{"title": "Dentist", "day": "2026-11-05", "time": "14:30", "columnId": "..."}`; `time` and `columnId` are optional |
 | `PUT` | `/household/calendar/entries/:id` | Change a date (same body) |
 | `DELETE` | `/household/calendar/entries/:id` | Remove a date |
+| `GET` | `/household/notes` | The household's quick notes: open ones newest first, then done ones |
+| `POST` | `/household/notes` | Add a note: `{"text": "Bins out on Monday"}`; `"done": true` puts back a cleared note |
+| `PUT` | `/household/notes/:id/done` | Tick a note off or back on: `{"done": true}` |
+| `DELETE` | `/household/notes/:id` | Remove a note |
+| `DELETE` | `/household/notes/done` | Clear all done notes; answers with what was removed |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
