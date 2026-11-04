@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import type { ExpenseRepository } from "../expenses/expense-repository.js";
+import { newExpenseBodySchema, type ExpenseAddedListener } from "../expenses/expense-routes.js";
+import { createExpense, type NewExpense } from "../expenses/expense.js";
 import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, validateDate } from "./meal-plan.js";
@@ -34,6 +37,8 @@ interface ShoppingRouteDependencies {
   mealRepository: MealRepository;
   shoppingItemRepository: ShoppingItemRepository;
   shoppingTripRepository: ShoppingTripRepository;
+  expenseRepository: ExpenseRepository;
+  onExpenseAdded?: ExpenseAddedListener;
 }
 
 export function shoppingRoutes({
@@ -41,6 +46,8 @@ export function shoppingRoutes({
   mealRepository,
   shoppingItemRepository,
   shoppingTripRepository,
+  expenseRepository,
+  onExpenseAdded,
 }: ShoppingRouteDependencies) {
   async function listView(householdId: string, from: string) {
     validateDate(from);
@@ -119,5 +126,22 @@ export function shoppingRoutes({
       await shoppingTripRepository.end(household.id);
       return listView(household.id, request.query.from);
     });
+
+    // Paying ends the trip: the groceries become an expense and what was ticked off by hand leaves the list.
+    app.post<{ Querystring: { from: string }; Body: NewExpense }>(
+      "/household/shopping-trip/checkout",
+      { schema: { querystring: weekQuery, body: newExpenseBodySchema } },
+      async (request, reply) => {
+        const { household, currentMemberId } = await authenticate(request);
+        const { items } = await listView(household.id, request.query.from);
+        const expense = createExpense(household, request.body);
+        await expenseRepository.add(household.id, expense);
+        onExpenseAdded?.(household, expense, currentMemberId);
+        const boughtExtraIds = items.flatMap((item) => (item.checked && item.extraId ? [item.extraId] : []));
+        await Promise.all(boughtExtraIds.map((extraId) => shoppingItemRepository.remove(household.id, extraId)));
+        await shoppingTripRepository.end(household.id);
+        return reply.status(HttpStatus.Created).send({ ...(await listView(household.id, request.query.from)), expenseId: expense.id });
+      },
+    );
   };
 }

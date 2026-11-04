@@ -13,7 +13,7 @@ const ISO_DATE_LENGTH = 10;
 
 const idProperty = { type: "string", maxLength: ID_MAX_LENGTH } as const;
 
-const newExpenseBodySchema = {
+export const newExpenseBodySchema = {
   type: "object",
   required: ["description", "amountCents", "paidByMemberId", "splitBetweenMemberIds", "spentOn"],
   additionalProperties: false,
@@ -53,12 +53,14 @@ interface SettlementParams {
   settlementId: string;
 }
 
+// Called after a new expense is saved, e.g. to tell the flatmates who share it.
+export type ExpenseAddedListener = (household: Household, expense: Expense, addedByMemberId: string) => void;
+
 export interface ExpenseRouteDependencies {
   authenticate: Authenticate;
   expenseRepository: ExpenseRepository;
   settlementRepository: SettlementRepository;
-  // Called after a new expense is saved, e.g. to tell the flatmates who share it.
-  onExpenseAdded?: (household: Household, expense: Expense, addedByMemberId: string) => void;
+  onExpenseAdded?: ExpenseAddedListener;
 }
 
 export function expenseRoutes({

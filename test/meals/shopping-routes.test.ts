@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.js";
+import { ExpenseErrorCode } from "../../src/expenses/expense-errors.js";
 import { HttpStatus } from "../../src/http-status.js";
 import { MealErrorCode } from "../../src/meals/meal-plan.js";
 import { newCredentials } from "../support/credentials.js";
@@ -70,4 +71,29 @@ describe("shopping routes", () => {
     expect((await call("GET", "/household/shopping-trip")).json()).toEqual({ trip: null });
   });
 
+  it("checks out into a grocery expense and clears what was ticked off by hand", async () => {
+    const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: ["500 g pasta"] })).json().recipes;
+    await call("PUT", `/household/meals/2026-11-04?${WEEK}`, { recipeId: pasta.id });
+    await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "2 l Milch" });
+    await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "toilet paper" });
+    const { currentMemberId } = (await call("GET", "/household")).json();
+    const started = (await call("POST", `/household/shopping-trip?${WEEK}`)).json();
+    for (const item of started.items.filter((candidate: { name: string }) => candidate.name !== "toilet paper")) {
+      await call("PUT", `/household/shopping-list/checks?${WEEK}`, { key: item.key, checked: true });
+    }
+    const groceries = { description: "Groceries", amountCents: 4_270, paidByMemberId: currentMemberId, splitBetweenMemberIds: [currentMemberId], spentOn: "2026-11-04" };
+
+    const refused = await call("POST", `/household/shopping-trip/checkout?${WEEK}`, { ...groceries, amountCents: 0 });
+    expect(refused.json().error).toBe(ExpenseErrorCode.InvalidAmount);
+    const checkedOut = await call("POST", `/household/shopping-trip/checkout?${WEEK}`, groceries);
+
+    expect(checkedOut.statusCode).toBe(HttpStatus.Created);
+    expect(checkedOut.json().trip).toBeNull();
+    expect(checkedOut.json().items.map(({ name, checked }: { name: string; checked: boolean }) => [name, checked])).toEqual([
+      ["pasta", true],
+      ["toilet paper", false],
+    ]);
+    const { expenses } = (await call("GET", "/household/expenses")).json();
+    expect(expenses).toEqual([expect.objectContaining({ id: checkedOut.json().expenseId, description: "Groceries", amountCents: 4_270 })]);
+  });
 });

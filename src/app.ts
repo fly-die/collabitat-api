@@ -13,7 +13,7 @@ import {
   InMemoryExpenseRepository,
   type ExpenseRepository,
 } from "./expenses/expense-repository.js";
-import { expenseRoutes } from "./expenses/expense-routes.js";
+import { expenseRoutes, type ExpenseAddedListener } from "./expenses/expense-routes.js";
 import {
   InMemorySettlementRepository,
   type SettlementRepository,
@@ -139,18 +139,12 @@ export function buildApp({
     accountRoutes({ authenticate, accounts, accountRepository, householdRepository, sessionRepository, views }),
   );
   const notify = createNotifier(pushSubscriptionRepository, pushSender, app.log);
-  app.register(
-    expenseRoutes({
-      authenticate,
-      expenseRepository,
-      settlementRepository,
-      onExpenseAdded: (household, expense, addedByMemberId) => {
-        for (const { memberId, message } of expenseAddedMessages(household, expense, addedByMemberId)) {
-          void notify([memberId], message);
-        }
-      },
-    }),
-  );
+  const onExpenseAdded: ExpenseAddedListener = (household, expense, addedByMemberId) => {
+    for (const { memberId, message } of expenseAddedMessages(household, expense, addedByMemberId)) {
+      void notify([memberId], message);
+    }
+  };
+  app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository, onExpenseAdded }));
   app.register(
     notificationRoutes({ authenticate, subscriptions: pushSubscriptionRepository, publicKey: pushSender?.publicKey }),
   );
@@ -166,7 +160,9 @@ export function buildApp({
   }
   app.register(taskRoutes({ authenticate, taskRepository }));
   app.register(mealRoutes({ authenticate, mealRepository }));
-  app.register(shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository }));
+  app.register(
+    shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, expenseRepository, onExpenseAdded }),
+  );
   app.register(liveRoutes({ authenticateToken, liveHub }));
   return app;
 }
