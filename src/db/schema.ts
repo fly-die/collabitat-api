@@ -258,3 +258,34 @@ export const shoppingChecks = pgTable(
   },
   (table) => [primaryKey({ columns: [table.householdId, table.weekFrom, table.itemKey] })],
 );
+
+// A person or group in the shared calendar; not necessarily someone with an account.
+export const calendarColumns = pgTable(
+  "calendar_columns",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("calendar_columns_household_id_idx").on(table.householdId)],
+);
+
+// An important date; removing its column moves it to everyone.
+export const calendarEntries = pgTable(
+  "calendar_entries",
+  {
+    id: uuid("id").primaryKey(),
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    day: date("day", { mode: "string" }).notNull(),
+    time: text("time"),
+    columnId: uuid("column_id").references(() => calendarColumns.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("calendar_entries_household_id_day_idx").on(table.householdId, table.day)],
+);

@@ -78,6 +78,13 @@
       "when": 1793780975554,
       "tag": "0010_shopping_trips",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793794665378,
+      "tag": "0011_calendar",
+      "breakpoints": true
     }
   ]
 }
