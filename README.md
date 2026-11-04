@@ -80,7 +80,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/tasks/:taskId` | Delete a chore |
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
-| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household"}` whenever someone in the household changes something |
+| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household" \| "meals"}` whenever someone in the household changes something |
 | `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
@@ -89,9 +89,14 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/meals/:date?from=...` | Clear a day |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
-| `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category |
+| `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category; each item has a `key` and `checked`, plus who is shopping (`trip`) |
 | `POST` | `/household/shopping-list/items?from=...` | Add an item by hand: `{"line": "2 l milk"}` |
 | `DELETE` | `/household/shopping-list/items/:itemId?from=...` | Remove an item added by hand |
+| `PUT` | `/household/shopping-list/checks?from=...` | Tick an item off or back on: `{"key": "...", "checked": true}` |
+| `GET` | `/household/shopping-trip` | The list someone is shopping right now, or `{"trip": null}` |
+| `POST` | `/household/shopping-trip?from=...` | Start shopping that week's list; a trip already going is kept |
+| `DELETE` | `/household/shopping-trip?from=...` | Stop shopping without paying |
+| `POST` | `/household/shopping-trip/checkout?from=...` | Pay: takes an expense (see below), ends the trip and removes ticked items added by hand; answers with the list and the `expenseId` |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
