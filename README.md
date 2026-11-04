@@ -80,7 +80,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/tasks/:taskId` | Delete a chore |
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
-| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household" \| "meals"}` whenever someone in the household changes something |
+| `GET` (WebSocket) | `/household/live` | Send `{"token": "<session token>"}` first; then get `{"type": "changed", "topic": "money" \| "chores" \| "household" \| "meals" \| "calendar"}` whenever someone in the household changes something |
 | `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
@@ -97,6 +97,12 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/household/shopping-trip?from=...` | Start shopping that week's list; a trip already going is kept |
 | `DELETE` | `/household/shopping-trip?from=...` | Stop shopping without paying |
 | `POST` | `/household/shopping-trip/checkout?from=...` | Pay: takes an expense (see below), ends the trip and removes ticked items added by hand; answers with the list and the `expenseId` |
+| `GET` | `/household/calendar?from=YYYY-MM-DD` | Four weeks of important dates from that day, with the calendar's columns (people or groups) |
+| `POST` | `/household/calendar/columns` | Add a column: `{"name": "Noah"}` |
+| `DELETE` | `/household/calendar/columns/:id` | Remove a column without upcoming dates; its past dates move to everyone |
+| `POST` | `/household/calendar/entries` | Add a date: `{"title": "Dentist", "day": "2026-11-05", "time": "14:30", "columnId": "..."}`; `time` and `columnId` are optional |
+| `PUT` | `/household/calendar/entries/:id` | Change a date (same body) |
+| `DELETE` | `/household/calendar/entries/:id` | Remove a date |
 
 Creating, joining or logging in returns a `token`. Send it as `Authorization: Bearer <token>` to the `/household` endpoints.
 
