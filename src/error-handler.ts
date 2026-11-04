@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { AccountError, AccountErrorCode } from "./accounts/account-errors.js";
+import { CalendarError, CalendarErrorCode } from "./calendar/calendar.js";
 import { ExpenseError, ExpenseErrorCode } from "./expenses/expense-errors.js";
 import { HouseholdError, HouseholdErrorCode } from "./households/household-errors.js";
 import { HttpStatus } from "./http-status.js";
@@ -63,6 +64,17 @@ const STATUS_BY_TASK_ERROR: Record<TaskErrorCode, number> = {
   [TaskErrorCode.CompletionNotFound]: HttpStatus.NotFound,
 };
 
+const STATUS_BY_CALENDAR_ERROR: Record<CalendarErrorCode, number> = {
+  [CalendarErrorCode.InvalidColumnName]: HttpStatus.BadRequest,
+  [CalendarErrorCode.InvalidTitle]: HttpStatus.BadRequest,
+  [CalendarErrorCode.InvalidDay]: HttpStatus.BadRequest,
+  [CalendarErrorCode.InvalidTime]: HttpStatus.BadRequest,
+  [CalendarErrorCode.UnknownColumn]: HttpStatus.BadRequest,
+  [CalendarErrorCode.ColumnHasDates]: HttpStatus.Conflict,
+  [CalendarErrorCode.ColumnNotFound]: HttpStatus.NotFound,
+  [CalendarErrorCode.EntryNotFound]: HttpStatus.NotFound,
+};
+
 export class TooManyAttemptsError extends Error {
   readonly code = "TOO_MANY_ATTEMPTS";
 
@@ -72,7 +84,7 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
-type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError | MealError;
+type DomainError = HouseholdError | ExpenseError | AccountError | TaskError | NotificationError | MealError | CalendarError;
 
 function isDomainError(error: unknown): error is DomainError {
   return (
@@ -81,7 +93,8 @@ function isDomainError(error: unknown): error is DomainError {
     error instanceof AccountError ||
     error instanceof TaskError ||
     error instanceof NotificationError ||
-    error instanceof MealError
+    error instanceof MealError ||
+    error instanceof CalendarError
   );
 }
 
@@ -97,6 +110,9 @@ function statusOf(error: DomainError) {
   }
   if (error instanceof MealError) {
     return STATUS_BY_MEAL_ERROR[error.code];
+  }
+  if (error instanceof CalendarError) {
+    return STATUS_BY_CALENDAR_ERROR[error.code];
   }
   return error instanceof AccountError
     ? STATUS_BY_ACCOUNT_ERROR[error.code]
