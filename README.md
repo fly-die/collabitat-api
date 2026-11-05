@@ -95,6 +95,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category; each item has a `key` and `checked`, plus who is shopping (`trip`) |
 | `POST` | `/household/shopping-list/items?from=...` | Add an item by hand: `{"line": "2 l milk"}` |
 | `DELETE` | `/household/shopping-list/items/:itemId?from=...` | Remove an item added by hand |
+| `POST` | `/household/shopping-list/recipes/:recipeId?from=...` | Put a recipe's ingredients on the list as items added by hand; answers with the list and the `addedItemIds` |
 | `PUT` | `/household/shopping-list/checks?from=...` | Tick an item off or back on: `{"key": "...", "checked": true}` |
 | `GET` | `/household/shopping-trip` | The list someone is shopping right now, or `{"trip": null}` |
 | `POST` | `/household/shopping-trip?from=...` | Start shopping that week's list; a trip already going is kept |
