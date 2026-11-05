@@ -49,6 +49,7 @@ const STATUS_BY_MEAL_ERROR: Record<MealErrorCode, number> = {
   [MealErrorCode.UnknownRecipe]: HttpStatus.BadRequest,
   [MealErrorCode.UnknownCook]: HttpStatus.BadRequest,
   [MealErrorCode.RecipeNotFound]: HttpStatus.NotFound,
+  [MealErrorCode.InvalidMealTimes]: HttpStatus.BadRequest,
 };
 
 const STATUS_BY_NOTIFICATION_ERROR: Record<NotificationErrorCode, number> = {

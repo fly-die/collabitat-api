@@ -86,6 +86,28 @@ describe("meal routes", () => {
     expect(gone.json().error).toBe(MealErrorCode.RecipeNotFound);
   });
 
+  it("plans breakfast and lunch beside dinner on the weekdays the household picks", async () => {
+    const [muesli] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Birchermüesli", servings: 2, ingredientLines: ["200 g Haferflocken"] })).json().recipes;
+
+    const times = await call("PUT", `/household/meal-times?${WEEK}`, { breakfast: [7, 6, 7], lunch: [] });
+    await call("PUT", `/household/meals/2026-11-08?${WEEK}&slot=breakfast`, { recipeId: muesli.id });
+    await call("PUT", `/household/meals/2026-11-08?${WEEK}`, { title: "Raclette" });
+    const week = (await call("GET", `/household/meals?${WEEK}`)).json();
+
+    expect(times.json().mealTimes).toEqual({ breakfast: [6, 7], lunch: [] });
+    expect(week.meals.map(({ date, slot, title }: { date: string; slot: string; title: string }) => [date, slot, title])).toEqual([
+      ["2026-11-08", "breakfast", "Birchermüesli"],
+      ["2026-11-08", "dinner", "Raclette"],
+    ]);
+    const shopping = (await call("GET", `/household/shopping-list?${WEEK}`)).json();
+    expect(shopping.items.map((item: { name: string }) => item.name)).toEqual(["Haferflocken"]);
+
+    await call("DELETE", `/household/meals/2026-11-08?${WEEK}&slot=breakfast`);
+    expect((await call("GET", `/household/meals?${WEEK}`)).json().meals.map((meal: { title: string }) => meal.title)).toEqual(["Raclette"]);
+    const refused = await call("PUT", `/household/meal-times?${WEEK}`, { breakfast: [0], lunch: [] });
+    expect(refused.json().error).toBe(MealErrorCode.InvalidMealTimes);
+  });
+
   it("keeps each household's meals to itself", async () => {
     const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: [] })).json().recipes;
     const other = await household(app, "seefeld");
@@ -93,7 +115,7 @@ describe("meal routes", () => {
     const borrowed = await call("PUT", `/household/meals/2026-11-04?${WEEK}`, { recipeId: pasta.id }, other);
 
     expect(borrowed.json().error).toBe(MealErrorCode.UnknownRecipe);
-    expect((await call("GET", `/household/meals?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", meals: [], recipes: [] });
+    expect((await call("GET", `/household/meals?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", meals: [], recipes: [], mealTimes: { breakfast: [], lunch: [] } });
   });
 
   it("needs a valid week start", async () => {

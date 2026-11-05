@@ -213,11 +213,26 @@ export const plannedMeals = pgTable(
       .notNull()
       .references(() => households.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
+    // breakfast, lunch or dinner; meals planned before there was a choice were dinners.
+    slot: text("slot").notNull().default("dinner"),
     title: text("title").notNull(),
     recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
     cookMemberId: uuid("cook_member_id").references(() => members.id, { onDelete: "set null" }),
   },
-  (table) => [primaryKey({ columns: [table.householdId, table.date] })],
+  (table) => [primaryKey({ columns: [table.householdId, table.date, table.slot] })],
+);
+
+// The weekdays a household also plans breakfast or lunch on (1 = Monday, 7 = Sunday).
+export const mealTimes = pgTable(
+  "meal_times",
+  {
+    householdId: uuid("household_id")
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    slot: text("slot").notNull(),
+    weekday: integer("weekday").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.slot, table.weekday] })],
 );
 
 // Items added to the shopping list by hand, as typed ("2 l milk").

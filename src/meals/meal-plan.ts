@@ -9,6 +9,7 @@ export const MealErrorCode = {
   UnknownRecipe: "UNKNOWN_RECIPE",
   UnknownCook: "UNKNOWN_COOK",
   RecipeNotFound: "RECIPE_NOT_FOUND",
+  InvalidMealTimes: "INVALID_MEAL_TIMES",
 } as const;
 
 export type MealErrorCode = (typeof MealErrorCode)[keyof typeof MealErrorCode];
@@ -57,8 +58,32 @@ export interface NewRecipe {
 }
 
 // One dinner per day: free text, or a saved recipe, and optionally who cooks.
+// Dinner is always planned; breakfast and lunch only on the weekdays the household picks.
+export const MEAL_SLOTS = ["breakfast", "lunch", "dinner"] as const;
+export type MealSlot = (typeof MEAL_SLOTS)[number];
+export const DEFAULT_SLOT: MealSlot = "dinner";
+const FIRST_WEEKDAY = 1;
+const LAST_WEEKDAY = 7;
+
+// Weekdays as 1 (Monday) to 7 (Sunday).
+export interface MealTimes {
+  breakfast: number[];
+  lunch: number[];
+}
+
+export function validateMealTimes(times: MealTimes): MealTimes {
+  const clean = (weekdays: number[]) => {
+    if (weekdays.some((weekday) => !Number.isInteger(weekday) || weekday < FIRST_WEEKDAY || weekday > LAST_WEEKDAY)) {
+      throw new MealError(MealErrorCode.InvalidMealTimes, "Pick days from Monday to Sunday.");
+    }
+    return [...new Set(weekdays)].sort((first, second) => first - second);
+  };
+  return { breakfast: clean(times.breakfast), lunch: clean(times.lunch) };
+}
+
 export interface PlannedMeal {
   date: string;
+  slot: MealSlot;
   title: string;
   recipeId: string | null;
   cookMemberId: string | null;
@@ -127,7 +152,7 @@ export function createRecipe(newRecipe: NewRecipe, existing?: Recipe): Recipe {
 }
 
 // A recipe without a typed title names the dinner after itself.
-export function planMeal(household: Household, recipes: Recipe[], date: string, plan: MealPlan): PlannedMeal {
+export function planMeal(household: Household, recipes: Recipe[], date: string, plan: MealPlan, slot: MealSlot = DEFAULT_SLOT): PlannedMeal {
   const recipe = plan.recipeId ? recipes.find((candidate) => candidate.id === plan.recipeId) : undefined;
   if (plan.recipeId && !recipe) {
     throw new MealError(MealErrorCode.UnknownRecipe, "That recipe is gone.");
@@ -138,6 +163,7 @@ export function planMeal(household: Household, recipes: Recipe[], date: string, 
   }
   return {
     date: validateDate(date),
+    slot,
     title: normalizeTitle(plan.title?.trim() ? plan.title : (recipe?.title ?? "")),
     recipeId: recipe?.id ?? null,
     cookMemberId,

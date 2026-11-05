@@ -1,8 +1,8 @@
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import type { Database } from "../db/database.js";
-import { plannedMeals, recipes } from "../db/schema.js";
-import type { PlannedMeal, Recipe } from "./meal-plan.js";
-import type { MealRepository } from "./meal-repository.js";
+import { mealTimes, plannedMeals, recipes } from "../db/schema.js";
+import type { MealSlot, MealTimes, PlannedMeal, Recipe } from "./meal-plan.js";
+import { byDayThenSlot, type MealRepository } from "./meal-repository.js";
 
 export class PostgresMealRepository implements MealRepository {
   constructor(private readonly database: Database) {}
@@ -43,11 +43,17 @@ export class PostgresMealRepository implements MealRepository {
   }
 
   async listMeals(householdId: string, from: string, to: string) {
-    return this.database
-      .select({ date: plannedMeals.date, title: plannedMeals.title, recipeId: plannedMeals.recipeId, cookMemberId: plannedMeals.cookMemberId })
+    const rows = await this.database
+      .select({
+        date: plannedMeals.date,
+        slot: plannedMeals.slot,
+        title: plannedMeals.title,
+        recipeId: plannedMeals.recipeId,
+        cookMemberId: plannedMeals.cookMemberId,
+      })
       .from(plannedMeals)
-      .where(and(eq(plannedMeals.householdId, householdId), gte(plannedMeals.date, from), lte(plannedMeals.date, to)))
-      .orderBy(asc(plannedMeals.date));
+      .where(and(eq(plannedMeals.householdId, householdId), gte(plannedMeals.date, from), lte(plannedMeals.date, to)));
+    return rows.map((row) => ({ ...row, slot: row.slot as MealSlot })).sort(byDayThenSlot);
   }
 
   async saveMeal(householdId: string, meal: PlannedMeal) {
@@ -55,10 +61,31 @@ export class PostgresMealRepository implements MealRepository {
     await this.database
       .insert(plannedMeals)
       .values({ ...meal, householdId })
-      .onConflictDoUpdate({ target: [plannedMeals.householdId, plannedMeals.date], set: { title, recipeId, cookMemberId } });
+      .onConflictDoUpdate({ target: [plannedMeals.householdId, plannedMeals.date, plannedMeals.slot], set: { title, recipeId, cookMemberId } });
   }
 
-  async removeMeal(householdId: string, date: string) {
-    await this.database.delete(plannedMeals).where(and(eq(plannedMeals.householdId, householdId), eq(plannedMeals.date, date)));
+  async removeMeal(householdId: string, date: string, slot: MealSlot) {
+    await this.database
+      .delete(plannedMeals)
+      .where(and(eq(plannedMeals.householdId, householdId), eq(plannedMeals.date, date), eq(plannedMeals.slot, slot)));
+  }
+
+  async getMealTimes(householdId: string) {
+    const rows = await this.database.select().from(mealTimes).where(eq(mealTimes.householdId, householdId)).orderBy(asc(mealTimes.weekday));
+    const weekdaysFor = (slot: MealSlot) => rows.filter((row) => row.slot === slot).map((row) => row.weekday);
+    return { breakfast: weekdaysFor("breakfast"), lunch: weekdaysFor("lunch") };
+  }
+
+  async saveMealTimes(householdId: string, times: MealTimes) {
+    await this.database.transaction(async (transaction) => {
+      await transaction.delete(mealTimes).where(eq(mealTimes.householdId, householdId));
+      const rows = [
+        ...times.breakfast.map((weekday) => ({ householdId, slot: "breakfast", weekday })),
+        ...times.lunch.map((weekday) => ({ householdId, slot: "lunch", weekday })),
+      ];
+      if (rows.length > 0) {
+        await transaction.insert(mealTimes).values(rows);
+      }
+    });
   }
 }

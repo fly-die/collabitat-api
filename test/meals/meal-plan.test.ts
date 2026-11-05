@@ -48,6 +48,7 @@ describe("meal plan", () => {
 
     expect(planMeal(household, [pasta], "2026-11-04", { recipeId: pasta.id, cookMemberId: lea.id })).toEqual({
       date: "2026-11-04",
+      slot: "dinner",
       title: "Pasta",
       recipeId: pasta.id,
       cookMemberId: lea.id,

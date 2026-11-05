@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createRecipe } from "../../src/meals/meal-plan.js";
 import { buildShoppingList, categorize } from "../../src/meals/shopping-list.js";
 
-const dinner = (date: string, title: string, recipeId: string | null) => ({ date, title, recipeId, cookMemberId: null });
+const dinner = (date: string, title: string, recipeId: string | null) => ({ date, slot: "dinner" as const, title, recipeId, cookMemberId: null });
 
 describe("shopping list", () => {
   it.each([
