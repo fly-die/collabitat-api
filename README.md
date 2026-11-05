@@ -68,6 +68,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `POST` | `/household/account` | Add an account for a flatmate who joined before accounts existed |
 | `GET` | `/household` | Your household with its members |
 | `POST` | `/household/members` | Add a flatmate (`{ "name": "..." }`) |
+| `PUT` | `/household/me` | Change my own name: `{"name": "Mia"}` |
 | `DELETE` | `/household/members/:memberId` | Remove a flatmate who is not part of any expense |
 | `GET` | `/household/expenses` | Expenses, payments, balances and the suggested payments to settle up |
 | `POST` | `/household/expenses` | Add an expense, split equally (see below) |
