@@ -5,6 +5,7 @@ import {
   createHousehold,
   joinAsExistingMember,
   removeMember,
+  renameMember,
 } from "../../src/households/household.js";
 import { PostgresHouseholdRepository } from "../../src/households/postgres-household-repository.js";
 import { PostgresSessionRepository } from "../../src/sessions/postgres-session-repository.js";
@@ -35,13 +36,14 @@ describe.runIf(databaseUrl)("Postgres repositories", () => {
     household = addMember(household, "Noah");
     await households.save(household);
     household = joinAsExistingMember(household, household.members[2].id).household;
+    household = renameMember(household, mia.id, "Mia Rossi");
     household = removeMember(household, household.members[1].id, mia.id);
     await households.save(household);
 
     const stored = await households.findByInviteCode(household.inviteCode);
     expect(stored).toEqual(household);
     expect(stored?.members.map(({ name, hasJoined }) => [name, hasJoined])).toEqual([
-      ["Mia", true],
+      ["Mia Rossi", true],
       ["Noah", true],
     ]);
     expect(await households.findByMemberId(mia.id)).toEqual(household);

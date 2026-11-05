@@ -101,6 +101,18 @@ export function joinAsExistingMember(household: Household, memberId: string): Ho
   };
 }
 
+// Same rules as adding someone: a real name, not taken by anyone else in the household.
+export function renameMember(household: Household, memberId: string, rawName: string): Household {
+  const name = normalizeName(rawName, "Name");
+  const taken = household.members.find(
+    (member) => member.id !== memberId && member.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+  );
+  if (taken) {
+    throw new HouseholdError(HouseholdErrorCode.DuplicateMember, `${taken.name} is already a member.`);
+  }
+  return { ...household, members: household.members.map((member) => (member.id === memberId ? { ...member, name } : member)) };
+}
+
 export function removeMember(household: Household, memberId: string, currentMemberId: string): Household {
   if (memberId === currentMemberId) {
     throw new HouseholdError(HouseholdErrorCode.CannotRemoveYourself, "You can't remove yourself.");

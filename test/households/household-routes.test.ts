@@ -98,6 +98,20 @@ describe("household routes", () => {
     expect(duplicate.json().error).toBe(HouseholdErrorCode.DuplicateMember);
   });
 
+  it("lets me change my own name, but not to a flatmate's", async () => {
+    const { token } = await createHousehold(app);
+    await addMember(app, token, "Lea");
+    const rename = (name: string) => app.inject({ method: "PUT", url: "/household/me", headers: authorized(token), payload: { name } });
+
+    const renamed = await rename("  Mia   Rossi ");
+    const taken = await rename("lea");
+    const blank = await rename(" ");
+
+    expect(renamed.json().members[0]).toEqual(expect.objectContaining({ id: renamed.json().currentMemberId, name: "Mia Rossi" }));
+    expect([taken.statusCode, taken.json().error]).toEqual([HttpStatus.Conflict, HouseholdErrorCode.DuplicateMember]);
+    expect(blank.json().error).toBe(HouseholdErrorCode.InvalidName);
+  });
+
   it("removes a flatmate but never myself", async () => {
     const { token, household } = await createHousehold(app);
     const lea = (await addMember(app, token, "Lea")).json().members[1];

@@ -15,6 +15,7 @@ import {
   joinAsExistingMember,
   joinAsNewMember,
   removeMember,
+  renameMember,
   type Household,
   type HouseholdWithMember,
 } from "./household.js";
@@ -171,6 +172,13 @@ export function householdRoutes({
         return reply.status(HttpStatus.Created).send(await views.viewFor(updated, currentMemberId));
       },
     );
+
+    app.put<{ Body: NameBody }>("/household/me", { schema: { body: nameBodySchema } }, async (request) => {
+      const { household, currentMemberId } = await authenticate(request);
+      const updated = renameMember(household, currentMemberId, request.body.name);
+      await householdRepository.save(updated);
+      return views.viewFor(updated, currentMemberId);
+    });
 
     app.delete<{ Params: MemberParams }>("/household/members/:memberId", async (request) => {
       const { household, currentMemberId } = await authenticate(request);
