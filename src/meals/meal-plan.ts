@@ -92,6 +92,11 @@ function parseQuantity(token: string) {
 }
 
 // "500 g pasta" → 500, g, pasta. "2 onions" → 2, no unit. "Salt" → just the name.
+// Back to a line like "500 g pasta", which parses to the same ingredient again.
+export function ingredientLine({ quantity, unit, name }: Ingredient) {
+  return [quantity, unit, name].filter((part) => part !== null).join(" ");
+}
+
 export function parseIngredient(line: string): Ingredient {
   const words = line.trim().replace(/\s+/g, " ").split(" ");
   const quantity = words.length > 1 && QUANTITY_PATTERN.test(words[0]) ? parseQuantity(words.shift() as string) : null;

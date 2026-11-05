@@ -53,6 +53,24 @@ describe("shopping routes", () => {
     expect((await call("GET", `/household/shopping-list?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", trip: null, items: [] });
   });
 
+  it("puts a recipe's ingredients on the list without planning it, and refuses one that is gone", async () => {
+    const [curry] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Curry", servings: 4, ingredientLines: ["1 Dose Kokosmilch", "0.5 kg Reis", "Koriander"] })).json().recipes;
+
+    const added = await call("POST", `/household/shopping-list/recipes/${curry.id}?${WEEK}`);
+
+    expect(added.statusCode).toBe(HttpStatus.Created);
+    expect(added.json().addedItemIds).toHaveLength(3);
+    expect(added.json().items.map(({ name, quantity, unit, extraId }: { name: string; quantity: number; unit: string; extraId: string }) => [name, quantity, unit, added.json().addedItemIds.includes(extraId)])).toEqual(
+      expect.arrayContaining([
+        ["Kokosmilch", 1, "dose", true],
+        ["Reis", 0.5, "kg", true],
+        ["Koriander", null, null, true],
+      ]),
+    );
+    await call("DELETE", `/household/recipes/${curry.id}?${WEEK}`);
+    expect((await call("POST", `/household/shopping-list/recipes/${curry.id}?${WEEK}`)).json().error).toBe(MealErrorCode.RecipeNotFound);
+  });
+
   it("shares a shopping trip and the ticks with the household until it ends", async () => {
     await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "Zopf" });
     const { currentMemberId } = (await call("GET", "/household")).json();

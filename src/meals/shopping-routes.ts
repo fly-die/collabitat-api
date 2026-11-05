@@ -5,7 +5,7 @@ import { newExpenseBodySchema, type ExpenseAddedListener } from "../expenses/exp
 import { createExpense, type NewExpense } from "../expenses/expense.js";
 import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
-import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, validateDate } from "./meal-plan.js";
+import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, ingredientLine, validateDate } from "./meal-plan.js";
 import type { MealRepository } from "./meal-repository.js";
 import type { ShoppingItemRepository } from "./shopping-item-repository.js";
 import { buildShoppingList } from "./shopping-list.js";
@@ -23,6 +23,7 @@ const itemBody = {
   properties: { line: { type: "string", maxLength: MAX_INGREDIENT_LENGTH * 2 } },
 } as const;
 const itemParams = { type: "object", required: ["itemId"], properties: { itemId: { type: "string", format: "uuid" } } } as const;
+const recipeParams = { type: "object", required: ["recipeId"], properties: { recipeId: { type: "string", format: "uuid" } } } as const;
 // Keys are "dinner:" or "extra:" plus a name and unit or an id.
 const MAX_ITEM_KEY_LENGTH = MAX_INGREDIENT_LENGTH * 2;
 const checkBody = {
@@ -79,6 +80,30 @@ export function shoppingRoutes({
         }
         await shoppingItemRepository.add(household.id, { id: randomUUID(), line, createdAt: new Date().toISOString() });
         return reply.status(HttpStatus.Created).send(await listView(household.id, request.query.from));
+      },
+    );
+
+    // A recipe's ingredients go on the list as items added by hand, without planning it as a dinner.
+    app.post<{ Params: { recipeId: string }; Querystring: { from: string } }>(
+      "/household/shopping-list/recipes/:recipeId",
+      { schema: { params: recipeParams, querystring: weekQuery } },
+      async (request, reply) => {
+        const { household } = await authenticate(request);
+        validateDate(request.query.from);
+        const recipe = (await mealRepository.listRecipes(household.id)).find((candidate) => candidate.id === request.params.recipeId);
+        if (!recipe) {
+          throw new MealError(MealErrorCode.RecipeNotFound, "That recipe is already gone.");
+        }
+        const now = Date.now();
+        const items = recipe.ingredients.map((ingredient, index) => ({
+          id: randomUUID(),
+          line: ingredientLine(ingredient),
+          // Apart by a millisecond each, so they keep the recipe's order.
+          createdAt: new Date(now + index).toISOString(),
+        }));
+        await Promise.all(items.map((item) => shoppingItemRepository.add(household.id, item)));
+        const view = await listView(household.id, request.query.from);
+        return reply.status(HttpStatus.Created).send({ ...view, addedItemIds: items.map((item) => item.id) });
       },
     );
 
