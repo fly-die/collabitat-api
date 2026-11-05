@@ -86,9 +86,10 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `GET` | `/push/public-key` | The key browsers subscribe with; 404 when notifications are off |
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
-| `GET` | `/household/meals?from=YYYY-MM-DD` | Seven days of dinners from that day, and the saved recipes |
-| `PUT` | `/household/meals/:date?from=...` | Plan a day's dinner: `title` and/or `recipeId`, optional `cookMemberId` |
-| `DELETE` | `/household/meals/:date?from=...` | Clear a day |
+| `GET` | `/household/meals?from=YYYY-MM-DD` | Seven days of meals from that day (each with a `slot`: `breakfast`, `lunch` or `dinner`), the `mealTimes` and the saved recipes |
+| `PUT` | `/household/meals/:date?from=...&slot=...` | Plan a meal: `title` and/or `recipeId`, optional `cookMemberId`; without `slot`, dinner |
+| `DELETE` | `/household/meals/:date?from=...&slot=...` | Clear a meal; without `slot`, dinner |
+| `PUT` | `/household/meal-times?from=...` | Which weekdays also get breakfast or lunch: `{"breakfast": [7], "lunch": [6, 7]}` |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
 | `PUT` | `/household/recipes/:recipeId?from=...` | Change a recipe (same body); dinners planned with it take its new name |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
