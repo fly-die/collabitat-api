@@ -11,6 +11,7 @@ import {
   MEAL_SLOTS,
   createRecipe,
   planMeal,
+  summarizePastMeals,
   validateDate,
   validateMealTimes,
   type MealPlan,
@@ -51,6 +52,8 @@ const weekQuery = { type: "object", required: ["from"], properties: { from: isoD
 // Which meal of the day; without it, dinner.
 const mealQuery = { type: "object", required: ["from"], properties: { from: isoDate, slot: { type: "string", enum: MEAL_SLOTS } } } as const;
 const weekdays = { type: "array", maxItems: 7, items: { type: "integer" } } as const;
+const historyQuery = { type: "object", required: ["before"], properties: { before: isoDate } } as const;
+const DAYS_OF_HISTORY = 365;
 const mealTimesBody = {
   type: "object",
   required: ["breakfast", "lunch"],
@@ -82,6 +85,14 @@ export function mealRoutes({ authenticate, mealRepository }: MealRouteDependenci
     app.get<{ Querystring: { from: string } }>("/household/meals", { schema: { querystring: weekQuery } }, async (request) => {
       const { household } = await authenticate(request);
       return weekView(household.id, request.query.from);
+    });
+
+    // What the household had in the year before `before` (usually today), to plan again.
+    app.get<{ Querystring: { before: string } }>("/household/meals/history", { schema: { querystring: historyQuery } }, async (request) => {
+      const { household } = await authenticate(request);
+      const before = validateDate(request.query.before);
+      const meals = await mealRepository.listMeals(household.id, addDays(before, -DAYS_OF_HISTORY), addDays(before, -1));
+      return { pastMeals: summarizePastMeals(meals) };
     });
 
     app.put<{ Params: { date: string }; Querystring: { from: string; slot?: MealSlot }; Body: MealPlan }>(

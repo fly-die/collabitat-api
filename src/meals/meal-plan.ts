@@ -169,3 +169,29 @@ export function planMeal(household: Household, recipes: Recipe[], date: string, 
     cookMemberId,
   };
 }
+
+export const MAX_PAST_MEALS = 30;
+
+// A dish the household had before, once, however often they had it.
+export interface PastMeal {
+  title: string;
+  recipeId: string | null;
+  lastOn: string;
+  times: number;
+}
+
+// The same dish under any capitalisation counts as one; its latest name and recipe win. Newest first.
+export function summarizePastMeals(meals: PlannedMeal[]): PastMeal[] {
+  const byDish = new Map<string, PastMeal>();
+  for (const meal of [...meals].sort((first, second) => first.date.localeCompare(second.date))) {
+    const key = meal.title.toLocaleLowerCase();
+    const earlier = byDish.get(key);
+    byDish.set(key, {
+      title: meal.title,
+      recipeId: meal.recipeId ?? earlier?.recipeId ?? null,
+      lastOn: meal.date,
+      times: (earlier?.times ?? 0) + 1,
+    });
+  }
+  return [...byDish.values()].sort((first, second) => second.lastOn.localeCompare(first.lastOn)).slice(0, MAX_PAST_MEALS);
+}

@@ -108,6 +108,25 @@ describe("meal routes", () => {
     expect(refused.json().error).toBe(MealErrorCode.InvalidMealTimes);
   });
 
+  it("lists past meals once each, newest first, with when and how often", async () => {
+    const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: [] })).json().recipes;
+    await call("PUT", `/household/meals/2026-10-20?${WEEK}`, { recipeId: pasta.id });
+    await call("PUT", `/household/meals/2026-10-27?${WEEK}`, { title: "Curry" });
+    await call("PUT", `/household/meals/2026-11-02?${WEEK}`, { title: "pasta" });
+    await call("PUT", `/household/meals/2026-11-02?${WEEK}&slot=breakfast`, { title: "Zopf" });
+    await call("PUT", `/household/meals/2026-11-04?${WEEK}`, { title: "Tonight's soup" });
+    await call("PUT", `/household/meals/2025-10-01?${WEEK}`, { title: "Too long ago" });
+
+    const history = await call("GET", "/household/meals/history?before=2026-11-04");
+
+    expect(history.json().pastMeals).toEqual([
+      { title: "pasta", recipeId: pasta.id, lastOn: "2026-11-02", times: 2 },
+      { title: "Zopf", recipeId: null, lastOn: "2026-11-02", times: 1 },
+      { title: "Curry", recipeId: null, lastOn: "2026-10-27", times: 1 },
+    ]);
+    expect((await call("GET", "/household/meals/history?before=nope")).json().error).toBe(MealErrorCode.InvalidDate);
+  });
+
   it("keeps each household's meals to itself", async () => {
     const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: [] })).json().recipes;
     const other = await household(app, "seefeld");
