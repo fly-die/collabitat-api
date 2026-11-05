@@ -81,7 +81,7 @@ export class PostgresHouseholdRepository implements HouseholdRepository {
           .onConflictDoUpdate({
             target: members.id,
             // Keeps the first join time once a member has joined.
-            set: { joinedAt: sql`coalesce(${members.joinedAt}, excluded.joined_at)` },
+            set: { name: sql`excluded.name`, joinedAt: sql`coalesce(${members.joinedAt}, excluded.joined_at)` },
           });
       }
     });
