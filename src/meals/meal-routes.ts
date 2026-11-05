@@ -100,6 +100,20 @@ export function mealRoutes({ authenticate, mealRepository }: MealRouteDependenci
       },
     );
 
+    app.put<{ Params: { recipeId: string }; Querystring: { from: string }; Body: NewRecipe }>(
+      "/household/recipes/:recipeId",
+      { schema: { params: recipeParams, querystring: weekQuery, body: recipeBodySchema } },
+      async (request) => {
+        const { household } = await authenticate(request);
+        const existing = (await mealRepository.listRecipes(household.id)).find((recipe) => recipe.id === request.params.recipeId);
+        if (!existing) {
+          throw new MealError(MealErrorCode.RecipeNotFound, "That recipe is already gone.");
+        }
+        await mealRepository.updateRecipe(household.id, createRecipe(request.body, existing));
+        return weekView(household.id, request.query.from);
+      },
+    );
+
     app.delete<{ Params: { recipeId: string }; Querystring: { from: string } }>(
       "/household/recipes/:recipeId",
       { schema: { params: recipeParams, querystring: weekQuery } },

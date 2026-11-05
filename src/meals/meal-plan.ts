@@ -100,7 +100,8 @@ export function parseIngredient(line: string): Ingredient {
   return { quantity, unit, name: words.join(" ") };
 }
 
-export function createRecipe(newRecipe: NewRecipe): Recipe {
+// Pass the existing recipe when editing, so it keeps its id and creation time.
+export function createRecipe(newRecipe: NewRecipe, existing?: Recipe): Recipe {
   if (!Number.isInteger(newRecipe.servings) || newRecipe.servings < 1 || newRecipe.servings > MAX_SERVINGS) {
     throw new MealError(MealErrorCode.InvalidServings, `Servings go from 1 to ${MAX_SERVINGS}.`);
   }
@@ -112,11 +113,11 @@ export function createRecipe(newRecipe: NewRecipe): Recipe {
     );
   }
   return {
-    id: randomUUID(),
+    id: existing?.id ?? randomUUID(),
     title: normalizeTitle(newRecipe.title),
     servings: newRecipe.servings,
     ingredients: lines.map(parseIngredient),
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
   };
 }
 

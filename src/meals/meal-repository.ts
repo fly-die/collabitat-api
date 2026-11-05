@@ -3,6 +3,8 @@ import type { PlannedMeal, Recipe } from "./meal-plan.js";
 export interface MealRepository {
   listRecipes(householdId: string): Promise<Recipe[]>;
   addRecipe(householdId: string, recipe: Recipe): Promise<void>;
+  // Dinners planned with it take its new name. Returns false when the household has no such recipe.
+  updateRecipe(householdId: string, recipe: Recipe): Promise<boolean>;
   // Returns false when the household has no recipe with this id. Planned dinners keep their title.
   removeRecipe(householdId: string, recipeId: string): Promise<boolean>;
   // Dinners from `from` up to and including `to`, earliest first.
@@ -28,6 +30,20 @@ export class InMemoryMealRepository implements MealRepository {
 
   async addRecipe(householdId: string, recipe: Recipe) {
     this.recipesByHouseholdId.set(householdId, [...(this.recipesByHouseholdId.get(householdId) ?? []), recipe]);
+  }
+
+  async updateRecipe(householdId: string, recipe: Recipe) {
+    const recipes = this.recipesByHouseholdId.get(householdId) ?? [];
+    if (!recipes.some((candidate) => candidate.id === recipe.id)) {
+      return false;
+    }
+    this.recipesByHouseholdId.set(householdId, recipes.map((candidate) => (candidate.id === recipe.id ? recipe : candidate)));
+    for (const [date, meal] of this.meals(householdId)) {
+      if (meal.recipeId === recipe.id) {
+        this.meals(householdId).set(date, { ...meal, title: recipe.title });
+      }
+    }
+    return true;
   }
 
   async removeRecipe(householdId: string, recipeId: string) {

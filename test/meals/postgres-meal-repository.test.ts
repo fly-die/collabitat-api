@@ -41,4 +41,19 @@ describe.runIf(databaseUrl)("Postgres meal repository", () => {
     await meals.removeMeal(household.id, "2026-11-04");
     expect(await meals.listMeals(household.id, "2026-11-02", "2026-11-08")).toEqual([]);
   });
+
+  it("changes a recipe and renames only the dinners planned with it", async () => {
+    const household = createHousehold("Seefeld 3", "Lea").household;
+    await households.save(household);
+    const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta"] });
+    await meals.addRecipe(household.id, pasta);
+    await meals.saveMeal(household.id, { date: "2026-11-04", title: "Pasta", recipeId: pasta.id, cookMemberId: null });
+    await meals.saveMeal(household.id, { date: "2026-11-05", title: "Pasta", recipeId: null, cookMemberId: null });
+    const changed = createRecipe({ title: "Penne", servings: 2, ingredientLines: ["250 g penne"] }, pasta);
+
+    expect(await meals.updateRecipe(household.id, changed)).toBe(true);
+    expect(await meals.listRecipes(household.id)).toEqual([changed]);
+    expect((await meals.listMeals(household.id, "2026-11-04", "2026-11-05")).map((meal) => meal.title)).toEqual(["Penne", "Pasta"]);
+    expect(await meals.updateRecipe(household.id, { ...changed, id: crypto.randomUUID() })).toBe(false);
+  });
 });

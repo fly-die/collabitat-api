@@ -16,6 +16,24 @@ export class PostgresMealRepository implements MealRepository {
     await this.database.insert(recipes).values({ ...recipe, householdId, createdAt: new Date(recipe.createdAt) });
   }
 
+  async updateRecipe(householdId: string, recipe: Recipe) {
+    return this.database.transaction(async (transaction) => {
+      const updated = await transaction
+        .update(recipes)
+        .set({ title: recipe.title, servings: recipe.servings, ingredients: recipe.ingredients })
+        .where(and(eq(recipes.id, recipe.id), eq(recipes.householdId, householdId)))
+        .returning({ id: recipes.id });
+      if (updated.length === 0) {
+        return false;
+      }
+      await transaction
+        .update(plannedMeals)
+        .set({ title: recipe.title })
+        .where(and(eq(plannedMeals.householdId, householdId), eq(plannedMeals.recipeId, recipe.id)));
+      return true;
+    });
+  }
+
   async removeRecipe(householdId: string, recipeId: string) {
     const removed = await this.database
       .delete(recipes)
