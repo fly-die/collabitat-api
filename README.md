@@ -77,6 +77,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `DELETE` | `/household/settlements/:settlementId` | Delete a payment |
 | `GET` | `/household/tasks` | Recurring chores, soonest due first |
 | `POST` | `/household/tasks` | Add one: `title`, `every`, `unit` (`day`, `week`, `month`), `firstDueOn`, optional `rotationMemberIds` (who takes turns, default everyone) |
+| `PUT` | `/household/tasks/:taskId` | Change a chore (same body); what was done and whose turn it is stay |
 | `DELETE` | `/household/tasks/:taskId` | Delete a chore |
 | `POST` | `/household/tasks/:taskId/completions` | Mark it done on `doneOn`; next due is one interval later |
 | `DELETE` | `/household/tasks/:taskId/completions/:completionId` | Undo marking it done |
@@ -88,6 +89,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `PUT` | `/household/meals/:date?from=...` | Plan a day's dinner: `title` and/or `recipeId`, optional `cookMemberId` |
 | `DELETE` | `/household/meals/:date?from=...` | Clear a day |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
+| `PUT` | `/household/recipes/:recipeId?from=...` | Change a recipe (same body); dinners planned with it take its new name |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
 | `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category; each item has a `key` and `checked`, plus who is shopping (`trip`) |
 | `POST` | `/household/shopping-list/items?from=...` | Add an item by hand: `{"line": "2 l milk"}` |
