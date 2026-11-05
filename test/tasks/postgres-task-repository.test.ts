@@ -51,4 +51,24 @@ describe.runIf(databaseUrl)("Postgres task repository", () => {
     expect(await tasks.remove(household.id, trash.id)).toBe(true);
     expect(await tasks.listByHousehold(household.id)).toEqual([]);
   });
+
+  it("changes a task and its turns without touching what was done", async () => {
+    const household = await savedHousehold();
+    const [mia, lea] = household.members;
+    const memberIds = [mia.id, lea.id];
+    const trash = createRecurringTask({ title: "Trash", every: 1, unit: "week", firstDueOn: "2026-11-02" }, memberIds);
+    const done = createCompletion(mia.id, "2026-11-02");
+    await tasks.add(household.id, trash);
+    await tasks.addCompletion(trash.id, done);
+
+    const changed = createRecurringTask(
+      { title: "Recycling", every: 2, unit: "month", firstDueOn: "2026-11-03", rotationMemberIds: [lea.id] },
+      memberIds,
+      { ...trash, completions: [done] },
+    );
+    await tasks.update(household.id, changed);
+
+    expect(await tasks.find(household.id, trash.id)).toEqual(changed);
+    expect(changed.completions).toEqual([done]);
+  });
 });

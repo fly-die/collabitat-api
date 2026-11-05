@@ -117,6 +117,40 @@ describe("task routes", () => {
     ]);
   });
 
+  it("changes a chore and keeps what was done and whose turn it is", async () => {
+    const lea = (
+      await app.inject({ method: "POST", url: "/household/members", headers: authorized(token), payload: { name: "Lea" } })
+    ).json().members[1];
+    const [trash] = ((await addTask("Take out the trash", "2026-11-02")).json() as TasksView).tasks;
+    const [done] = ((await markDone(trash.id, "2026-11-02")).json() as TasksView).tasks;
+
+    const changed = await app.inject({
+      method: "PUT",
+      url: `/household/tasks/${trash.id}`,
+      headers: authorized(token),
+      payload: { title: "Take out the recycling", every: 2, unit: "week", firstDueOn: "2026-11-02", rotationMemberIds: [lea.id, miaId] },
+    });
+
+    expect((changed.json() as TasksView).tasks).toEqual([
+      expect.objectContaining({
+        id: trash.id,
+        title: "Take out the recycling",
+        nextDueOn: "2026-11-16",
+        lastCompletion: done.lastCompletion,
+        rotation: [lea.id, miaId],
+        turnMemberId: lea.id,
+      }),
+    ]);
+    const other = await newHousehold(app, "seefeld");
+    const fromOther = await app.inject({
+      method: "PUT",
+      url: `/household/tasks/${trash.id}`,
+      headers: authorized(other.token),
+      payload: { title: "Mine now", every: 1, unit: "week", firstDueOn: "2026-11-02" },
+    });
+    expect(fromOther.json().error).toBe(TaskErrorCode.TaskNotFound);
+  });
+
   it("won't let someone from another household take turns", async () => {
     const other = await newHousehold(app, "seefeld");
 

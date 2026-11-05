@@ -115,6 +115,18 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
       },
     );
 
+    app.put<{ Params: TaskParams; Body: NewRecurringTask }>(
+      "/household/tasks/:taskId",
+      { schema: { params: taskParamsSchema, body: newTaskBodySchema } },
+      async (request) => {
+        const { household } = await authenticate(request);
+        const existing = await findTask(household.id, request.params.taskId);
+        const memberIds = household.members.map((member) => member.id);
+        await taskRepository.update(household.id, createRecurringTask(request.body, memberIds, existing));
+        return tasksView(household);
+      },
+    );
+
     app.delete<{ Params: TaskParams }>(
       "/household/tasks/:taskId",
       { schema: { params: taskParamsSchema } },

@@ -64,6 +64,21 @@ export class PostgresTaskRepository implements TaskRepository {
     });
   }
 
+  async update(householdId: string, task: RecurringTask) {
+    await this.database.transaction(async (transaction) => {
+      await transaction
+        .update(recurringTasks)
+        .set({ title: task.title, intervalCount: task.interval.every, intervalUnit: task.interval.unit, firstDueOn: task.firstDueOn })
+        .where(and(eq(recurringTasks.id, task.id), eq(recurringTasks.householdId, householdId)));
+      await transaction.delete(taskRotations).where(eq(taskRotations.taskId, task.id));
+      if (task.rotation.length > 0) {
+        await transaction
+          .insert(taskRotations)
+          .values(task.rotation.map((memberId, position) => ({ taskId: task.id, memberId, position })));
+      }
+    });
+  }
+
   async remove(householdId: string, taskId: string) {
     const removed = await this.database
       .delete(recurringTasks)

@@ -80,20 +80,22 @@ function validateRotation(rotation: string[], allowedMemberIds: string[]) {
   }
 }
 
-export function createRecurringTask(newTask: NewRecurringTask, allowedMemberIds: string[]): RecurringTask {
+// Pass the existing task when editing: it keeps its id, creation time and everything done so far,
+// so the next due date and whose turn it is still follow from the latest completion.
+export function createRecurringTask(newTask: NewRecurringTask, allowedMemberIds: string[], existing?: RecurringTask): RecurringTask {
   const interval = { every: newTask.every, unit: newTask.unit };
   const rotation = newTask.rotationMemberIds ?? allowedMemberIds;
   validateInterval(interval);
   validateDate(newTask.firstDueOn);
   validateRotation(rotation, allowedMemberIds);
   return {
-    id: randomUUID(),
+    id: existing?.id ?? randomUUID(),
     title: normalizeTitle(newTask.title),
     interval,
     firstDueOn: newTask.firstDueOn,
-    createdAt: new Date().toISOString(),
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
     rotation,
-    completions: [],
+    completions: existing?.completions ?? [],
   };
 }
 

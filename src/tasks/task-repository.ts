@@ -4,6 +4,8 @@ export interface TaskRepository {
   listByHousehold(householdId: string): Promise<RecurringTask[]>;
   find(householdId: string, taskId: string): Promise<RecurringTask | undefined>;
   add(householdId: string, task: RecurringTask): Promise<void>;
+  // Changes what it is, how often and who takes turns; callers check first that it belongs to the household.
+  update(householdId: string, task: RecurringTask): Promise<void>;
   // Returns false when the household has no task with this id.
   remove(householdId: string, taskId: string): Promise<boolean>;
   // Callers check first that the task belongs to the household.
@@ -38,6 +40,11 @@ export class InMemoryTaskRepository implements TaskRepository {
 
   async add(householdId: string, task: RecurringTask) {
     this.tasksByHouseholdId.set(householdId, [...(this.tasksByHouseholdId.get(householdId) ?? []), task]);
+  }
+
+  async update(householdId: string, task: RecurringTask) {
+    const tasks = this.tasksByHouseholdId.get(householdId) ?? [];
+    this.tasksByHouseholdId.set(householdId, tasks.map((candidate) => (candidate.id === task.id ? task : candidate)));
   }
 
   async remove(householdId: string, taskId: string) {
