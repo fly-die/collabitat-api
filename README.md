@@ -90,6 +90,7 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `PUT` | `/household/meals/:date?from=...&slot=...` | Plan a meal: `title` and/or `recipeId`, optional `cookMemberId`; without `slot`, dinner |
 | `DELETE` | `/household/meals/:date?from=...&slot=...` | Clear a meal; without `slot`, dinner |
 | `PUT` | `/household/meal-times?from=...` | Which weekdays also get breakfast or lunch: `{"breakfast": [7], "lunch": [6, 7]}` |
+| `GET` | `/household/meals/history?before=YYYY-MM-DD` | Meals of the year before that day, each dish once, newest first, with `lastOn` and `times` |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
 | `PUT` | `/household/recipes/:recipeId?from=...` | Change a recipe (same body); dinners planned with it take its new name |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
