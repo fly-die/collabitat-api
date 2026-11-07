@@ -20,20 +20,20 @@ describe.runIf(databaseUrl)("Postgres meal repository", () => {
 
   afterAll(() => connection.close());
 
-  it("stores recipes and one dinner per day, and keeps the dinner when its recipe goes", async () => {
+  it("stores recipes and one dinner per day with how many eat, and keeps the dinner when its recipe goes", async () => {
     const household = createHousehold("Langstrasse 12", "Mia").household;
     await households.save(household);
     const [mia] = household.members;
     const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta", "Salt"] });
 
     await meals.addRecipe(household.id, pasta);
-    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Curry", recipeId: null, cookMemberId: null });
-    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: mia.id });
-    await meals.saveMeal(household.id, { date: "2026-11-10", slot: "dinner", title: "Soup", recipeId: null, cookMemberId: null });
+    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Curry", recipeId: null, cookMemberId: null, servings: null });
+    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: mia.id, servings: 6 });
+    await meals.saveMeal(household.id, { date: "2026-11-10", slot: "dinner", title: "Soup", recipeId: null, cookMemberId: null, servings: null });
 
     expect(await meals.listRecipes(household.id)).toEqual([pasta]);
     expect(await meals.listMeals(household.id, "2026-11-02", "2026-11-08")).toEqual([
-      { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: mia.id },
+      { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: mia.id, servings: 6 },
     ]);
 
     expect(await meals.removeRecipe(household.id, pasta.id)).toBe(true);
@@ -45,7 +45,7 @@ describe.runIf(databaseUrl)("Postgres meal repository", () => {
   it("keeps breakfast, lunch and dinner of one day apart, and the weekdays they are planned on", async () => {
     const household = createHousehold("Kreis 4", "Noah").household;
     await households.save(household);
-    const meal = (slot: "breakfast" | "lunch" | "dinner", title: string) => ({ date: "2026-11-08", slot, title, recipeId: null, cookMemberId: null });
+    const meal = (slot: "breakfast" | "lunch" | "dinner", title: string) => ({ date: "2026-11-08", slot, title, recipeId: null, cookMemberId: null, servings: null });
     await meals.saveMeal(household.id, meal("dinner", "Raclette"));
     await meals.saveMeal(household.id, meal("breakfast", "Zopf"));
     await meals.saveMeal(household.id, meal("lunch", "Salad"));
@@ -67,8 +67,8 @@ describe.runIf(databaseUrl)("Postgres meal repository", () => {
     await households.save(household);
     const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta"] });
     await meals.addRecipe(household.id, pasta);
-    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: null });
-    await meals.saveMeal(household.id, { date: "2026-11-05", slot: "dinner", title: "Pasta", recipeId: null, cookMemberId: null });
+    await meals.saveMeal(household.id, { date: "2026-11-04", slot: "dinner", title: "Pasta", recipeId: pasta.id, cookMemberId: null, servings: null });
+    await meals.saveMeal(household.id, { date: "2026-11-05", slot: "dinner", title: "Pasta", recipeId: null, cookMemberId: null, servings: null });
     const changed = createRecipe({ title: "Penne", servings: 2, ingredientLines: ["250 g penne"] }, pasta);
 
     expect(await meals.updateRecipe(household.id, changed)).toBe(true);

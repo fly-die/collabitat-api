@@ -87,12 +87,15 @@ export interface PlannedMeal {
   title: string;
   recipeId: string | null;
   cookMemberId: string | null;
+  // How many eat, for a meal cooked from a recipe; null means the recipe's own servings.
+  servings: number | null;
 }
 
 export interface MealPlan {
   title?: string;
   recipeId?: string | null;
   cookMemberId?: string | null;
+  servings?: number | null;
 }
 
 function normalizeTitle(raw: string) {
@@ -130,11 +133,26 @@ export function parseIngredient(line: string): Ingredient {
   return { quantity, unit, name: words.join(" ") };
 }
 
-// Pass the existing recipe when editing, so it keeps its id and creation time.
-export function createRecipe(newRecipe: NewRecipe, existing?: Recipe): Recipe {
-  if (!Number.isInteger(newRecipe.servings) || newRecipe.servings < 1 || newRecipe.servings > MAX_SERVINGS) {
+export function validateServings(servings: number) {
+  if (!Number.isInteger(servings) || servings < 1 || servings > MAX_SERVINGS) {
     throw new MealError(MealErrorCode.InvalidServings, `Servings go from 1 to ${MAX_SERVINGS}.`);
   }
+  return servings;
+}
+
+const AMOUNT_DECIMALS = 2;
+
+// The recipe's amounts for another number of people; amounts without a number stay as they are.
+export function scaleIngredients(recipe: Recipe, servings: number): Ingredient[] {
+  const factor = servings / recipe.servings;
+  return recipe.ingredients.map((ingredient) =>
+    ingredient.quantity === null ? ingredient : { ...ingredient, quantity: Number((ingredient.quantity * factor).toFixed(AMOUNT_DECIMALS)) },
+  );
+}
+
+// Pass the existing recipe when editing, so it keeps its id and creation time.
+export function createRecipe(newRecipe: NewRecipe, existing?: Recipe): Recipe {
+  validateServings(newRecipe.servings);
   const lines = newRecipe.ingredientLines.map((line) => line.trim()).filter((line) => line.length > 0);
   if (lines.length > MAX_INGREDIENTS || lines.some((line) => line.length > MAX_INGREDIENT_LENGTH)) {
     throw new MealError(
@@ -167,6 +185,8 @@ export function planMeal(household: Household, recipes: Recipe[], date: string, 
     title: normalizeTitle(plan.title?.trim() ? plan.title : (recipe?.title ?? "")),
     recipeId: recipe?.id ?? null,
     cookMemberId,
+    // Without a recipe there are no amounts to scale; the recipe's own number needs no saving.
+    servings: recipe && plan.servings != null && plan.servings !== recipe.servings ? validateServings(plan.servings) : null,
   };
 }
 

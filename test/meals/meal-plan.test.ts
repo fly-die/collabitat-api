@@ -52,6 +52,7 @@ describe("meal plan", () => {
       title: "Pasta",
       recipeId: pasta.id,
       cookMemberId: lea.id,
+      servings: null,
     });
     expect(planMeal(household, [], "2026-11-04", { title: "Leftovers" }).cookMemberId).toBeNull();
     expect(() => planMeal(household, [], "2026-11-04", { recipeId: pasta.id })).toThrow(

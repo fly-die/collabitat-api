@@ -50,6 +50,7 @@ export class PostgresMealRepository implements MealRepository {
         title: plannedMeals.title,
         recipeId: plannedMeals.recipeId,
         cookMemberId: plannedMeals.cookMemberId,
+        servings: plannedMeals.servings,
       })
       .from(plannedMeals)
       .where(and(eq(plannedMeals.householdId, householdId), gte(plannedMeals.date, from), lte(plannedMeals.date, to)));
@@ -57,11 +58,11 @@ export class PostgresMealRepository implements MealRepository {
   }
 
   async saveMeal(householdId: string, meal: PlannedMeal) {
-    const { title, recipeId, cookMemberId } = meal;
+    const { title, recipeId, cookMemberId, servings } = meal;
     await this.database
       .insert(plannedMeals)
       .values({ ...meal, householdId })
-      .onConflictDoUpdate({ target: [plannedMeals.householdId, plannedMeals.date, plannedMeals.slot], set: { title, recipeId, cookMemberId } });
+      .onConflictDoUpdate({ target: [plannedMeals.householdId, plannedMeals.date, plannedMeals.slot], set: { title, recipeId, cookMemberId, servings } });
   }
 
   async removeMeal(householdId: string, date: string, slot: MealSlot) {

@@ -45,6 +45,21 @@ describe("meal routes", () => {
     expect(cleared.json().meals).toHaveLength(1);
   });
 
+  it("plans a meal from a recipe for how many eat, and refuses an impossible number", async () => {
+    const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: ["500 g pasta"] })).json().recipes;
+
+    const forSix = await call("PUT", `/household/meals/2026-11-04?${WEEK}`, { recipeId: pasta.id, servings: 6 });
+    const asTheRecipe = await call("PUT", `/household/meals/2026-11-05?${WEEK}`, { recipeId: pasta.id, servings: 4 });
+    const noRecipe = await call("PUT", `/household/meals/2026-11-06?${WEEK}`, { title: "Soup", servings: 6 });
+    const tooMany = await call("PUT", `/household/meals/2026-11-07?${WEEK}`, { recipeId: pasta.id, servings: 51 });
+
+    expect(forSix.json().meals[0].servings).toBe(6);
+    expect(asTheRecipe.json().meals[1].servings).toBeNull();
+    expect(noRecipe.json().meals[2].servings).toBeNull();
+    expect(tooMany.statusCode).toBe(HttpStatus.BadRequest);
+    expect(tooMany.json().error).toBe(MealErrorCode.InvalidServings);
+  });
+
   it("keeps a dinner's name when its recipe is deleted", async () => {
     const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: [] })).json().recipes;
     await call("PUT", `/household/meals/2026-11-04?${WEEK}`, { recipeId: pasta.id });

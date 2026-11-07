@@ -71,6 +71,21 @@ describe("shopping routes", () => {
     expect((await call("POST", `/household/shopping-list/recipes/${curry.id}?${WEEK}`)).json().error).toBe(MealErrorCode.RecipeNotFound);
   });
 
+  it("puts a recipe on the list for another number of people", async () => {
+    const [pasta] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Pasta", servings: 4, ingredientLines: ["500 g pasta", "Salt"] })).json().recipes;
+
+    const forTwo = await call("POST", `/household/shopping-list/recipes/${pasta.id}?${WEEK}&servings=2`);
+    const forNone = await call("POST", `/household/shopping-list/recipes/${pasta.id}?${WEEK}&servings=0`);
+
+    expect(forTwo.json().items.map(({ name, quantity, unit }: { name: string; quantity: number; unit: string }) => [name, quantity, unit])).toEqual(
+      expect.arrayContaining([
+        ["pasta", 250, "g"],
+        ["Salt", null, null],
+      ]),
+    );
+    expect(forNone.json().error).toBe(MealErrorCode.InvalidServings);
+  });
+
   it("shares a shopping trip and the ticks with the household until it ends", async () => {
     await call("POST", `/household/shopping-list/items?${WEEK}`, { line: "Zopf" });
     const { currentMemberId } = (await call("GET", "/household")).json();

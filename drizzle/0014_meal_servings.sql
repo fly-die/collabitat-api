@@ -1,0 +1,1 @@
+ALTER TABLE "planned_meals" ADD COLUMN "servings" integer;

@@ -5,7 +5,7 @@ import { newExpenseBodySchema, type ExpenseAddedListener } from "../expenses/exp
 import { createExpense, type NewExpense } from "../expenses/expense.js";
 import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
-import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, ingredientLine, validateDate } from "./meal-plan.js";
+import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, ingredientLine, scaleIngredients, validateDate, validateServings } from "./meal-plan.js";
 import type { MealRepository } from "./meal-repository.js";
 import type { ShoppingItemRepository } from "./shopping-item-repository.js";
 import { buildShoppingList } from "./shopping-list.js";
@@ -24,6 +24,12 @@ const itemBody = {
 } as const;
 const itemParams = { type: "object", required: ["itemId"], properties: { itemId: { type: "string", format: "uuid" } } } as const;
 const recipeParams = { type: "object", required: ["recipeId"], properties: { recipeId: { type: "string", format: "uuid" } } } as const;
+// For how many; without it, the recipe's own servings.
+const recipeToListQuery = {
+  type: "object",
+  required: ["from"],
+  properties: { from: { type: "string", maxLength: ISO_DATE_LENGTH }, servings: { type: "integer" } },
+} as const;
 // Keys are "dinner:" or "extra:" plus a name and unit or an id.
 const MAX_ITEM_KEY_LENGTH = MAX_INGREDIENT_LENGTH * 2;
 const checkBody = {
@@ -84,9 +90,9 @@ export function shoppingRoutes({
     );
 
     // A recipe's ingredients go on the list as items added by hand, without planning it as a dinner.
-    app.post<{ Params: { recipeId: string }; Querystring: { from: string } }>(
+    app.post<{ Params: { recipeId: string }; Querystring: { from: string; servings?: number } }>(
       "/household/shopping-list/recipes/:recipeId",
-      { schema: { params: recipeParams, querystring: weekQuery } },
+      { schema: { params: recipeParams, querystring: recipeToListQuery } },
       async (request, reply) => {
         const { household } = await authenticate(request);
         validateDate(request.query.from);
@@ -94,8 +100,9 @@ export function shoppingRoutes({
         if (!recipe) {
           throw new MealError(MealErrorCode.RecipeNotFound, "That recipe is already gone.");
         }
+        const servings = validateServings(request.query.servings ?? recipe.servings);
         const now = Date.now();
-        const items = recipe.ingredients.map((ingredient, index) => ({
+        const items = scaleIngredients(recipe, servings).map((ingredient, index) => ({
           id: randomUUID(),
           line: ingredientLine(ingredient),
           // Apart by a millisecond each, so they keep the recipe's order.

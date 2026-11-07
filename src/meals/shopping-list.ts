@@ -1,4 +1,4 @@
-import { parseIngredient, type Ingredient, type PlannedMeal, type Recipe } from "./meal-plan.js";
+import { parseIngredient, scaleIngredients, type Ingredient, type PlannedMeal, type Recipe } from "./meal-plan.js";
 
 // In the order you walk through a typical Swiss supermarket.
 export const CATEGORY_ORDER = ["produce", "bakery", "dairy", "meat-fish", "pantry", "frozen", "drinks", "household", "other"] as const;
@@ -163,12 +163,14 @@ const DINNER_KEY_PREFIX = "dinner:";
 const EXTRA_KEY_PREFIX = "extra:";
 export const extraItemKey = (extraId: string) => `${EXTRA_KEY_PREFIX}${extraId}`;
 
-// The week's list: every ingredient of every planned dinner that uses a recipe, added up, plus what was added by hand.
+// The week's list: every ingredient of every planned meal that uses a recipe, scaled to how many eat and added up,
+// plus what was added by hand.
 export function buildShoppingList(meals: PlannedMeal[], recipes: Recipe[], extras: ExtraItem[], checkedKeys: string[] = []): ShoppingItem[] {
   const checked = new Set(checkedKeys);
   const needs = meals.flatMap((meal) => {
     const recipe = recipes.find((candidate) => candidate.id === meal.recipeId);
-    return (recipe?.ingredients ?? []).map((ingredient) => ({ ingredient, dinner: meal.title }));
+    const ingredients = recipe ? scaleIngredients(recipe, meal.servings ?? recipe.servings) : [];
+    return ingredients.map((ingredient) => ({ ingredient, dinner: meal.title }));
   });
   const fromDinners = mergeNeeds(needs).map((need) => ({
     name: need.name,

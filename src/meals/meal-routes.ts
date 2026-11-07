@@ -43,7 +43,12 @@ const recipeBodySchema = {
 const mealBodySchema = {
   type: "object",
   additionalProperties: false,
-  properties: { title: { type: "string", maxLength: MAX_TITLE_LENGTH * 2 }, recipeId: nullableUuid, cookMemberId: nullableUuid },
+  properties: {
+    title: { type: "string", maxLength: MAX_TITLE_LENGTH * 2 },
+    recipeId: nullableUuid,
+    cookMemberId: nullableUuid,
+    servings: { anyOf: [{ type: "number" }, { type: "null" }] },
+  },
 } as const;
 
 const dateParams = { type: "object", required: ["date"], properties: { date: isoDate } } as const;

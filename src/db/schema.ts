@@ -218,6 +218,8 @@ export const plannedMeals = pgTable(
     title: text("title").notNull(),
     recipeId: uuid("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
     cookMemberId: uuid("cook_member_id").references(() => members.id, { onDelete: "set null" }),
+    // How many eat; null means the recipe's own servings.
+    servings: integer("servings"),
   },
   (table) => [primaryKey({ columns: [table.householdId, table.date, table.slot] })],
 );

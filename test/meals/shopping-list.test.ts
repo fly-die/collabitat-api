@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createRecipe } from "../../src/meals/meal-plan.js";
 import { buildShoppingList, categorize } from "../../src/meals/shopping-list.js";
 
-const dinner = (date: string, title: string, recipeId: string | null) => ({ date, slot: "dinner" as const, title, recipeId, cookMemberId: null });
+const dinner = (date: string, title: string, recipeId: string | null) => ({ date, slot: "dinner" as const, title, recipeId, cookMemberId: null, servings: null });
 
 describe("shopping list", () => {
   it.each([
@@ -39,6 +39,20 @@ describe("shopping list", () => {
       ["pasta", 1.25, "kg", "pantry", ["Pasta", "Lasagne"], null],
       ["Salt", null, null, "pantry", ["Pasta", "Lasagne"], null],
       ["Tomaten", 3, "Dosen", "pantry", ["Pasta", "Lasagne"], null],
+    ]);
+  });
+
+  it("scales each meal's recipe to how many eat before adding up", () => {
+    const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta", "2 Zwiebeln", "Salt"] });
+    const forSix = { ...dinner("2026-11-02", "Pasta", pasta.id), servings: 6 };
+    const forTwo = { ...dinner("2026-11-03", "Pasta", pasta.id), servings: 2 };
+
+    const list = buildShoppingList([forSix, forTwo], [pasta], []);
+
+    expect(list.map(({ name, quantity, unit }) => [quantity, unit, name].filter((part) => part !== null).join(" "))).toEqual([
+      "4 Zwiebeln",
+      "1 kg pasta",
+      "Salt",
     ]);
   });
 
