@@ -87,17 +87,18 @@ Every push to `main` that passes CI is then deployed. Without `API_DOMAIN` the d
 | `PUT` | `/household/push-subscription` | Turn notifications on for this device (a browser push subscription) |
 | `DELETE` | `/household/push-subscription` | Turn them off again: `{"endpoint": "..."}` |
 | `GET` | `/household/meals?from=YYYY-MM-DD` | Seven days of meals from that day (each with a `slot`: `breakfast`, `lunch` or `dinner`), the `mealTimes` and the saved recipes |
-| `PUT` | `/household/meals/:date?from=...&slot=...` | Plan a meal: `title` and/or `recipeId`, optional `cookMemberId`; without `slot`, dinner |
+| `PUT` | `/household/meals/:date?from=...&slot=...` | Plan a meal: `title` and/or `recipeId`, optional `cookMemberId` and `servings` (how many eat, for a recipe); without `slot`, dinner |
 | `DELETE` | `/household/meals/:date?from=...&slot=...` | Clear a meal; without `slot`, dinner |
 | `PUT` | `/household/meal-times?from=...` | Which weekdays also get breakfast or lunch: `{"breakfast": [7], "lunch": [6, 7]}` |
 | `GET` | `/household/meals/history?before=YYYY-MM-DD` | Meals of the year before that day, each dish once, newest first, with `lastOn` and `times` |
 | `POST` | `/household/recipes?from=...` | Save a recipe: `title`, `servings`, `ingredientLines` like `500 g pasta` |
 | `PUT` | `/household/recipes/:recipeId?from=...` | Change a recipe (same body); dinners planned with it take its new name |
 | `DELETE` | `/household/recipes/:recipeId?from=...` | Delete a recipe; planned dinners keep their name |
-| `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's dinners need, added up across recipes and units, grouped by shop category; each item has a `key` and `checked`, plus who is shopping (`trip`) |
+| `POST` | `/household/recipe-import` | Read a recipe from a public https page (`link`), from its schema.org data; answers with `title`, `servings` and `ingredientLines` to check before saving. Private and local addresses are refused |
+| `GET` | `/household/shopping-list?from=YYYY-MM-DD` | What the week's meals need, scaled to how many eat and added up across recipes and units, grouped by shop category; each item has a `key` and `checked`, plus who is shopping (`trip`) |
 | `POST` | `/household/shopping-list/items?from=...` | Add an item by hand: `{"line": "2 l milk"}` |
 | `DELETE` | `/household/shopping-list/items/:itemId?from=...` | Remove an item added by hand |
-| `POST` | `/household/shopping-list/recipes/:recipeId?from=...` | Put a recipe's ingredients on the list as items added by hand; answers with the list and the `addedItemIds` |
+| `POST` | `/household/shopping-list/recipes/:recipeId?from=...&servings=...` | Put a recipe's ingredients on the list as items added by hand, for `servings` people (default: the recipe's); answers with the list and the `addedItemIds` |
 | `PUT` | `/household/shopping-list/checks?from=...` | Tick an item off or back on: `{"key": "...", "checked": true}` |
 | `GET` | `/household/shopping-trip` | The list someone is shopping right now, or `{"trip": null}` |
 | `POST` | `/household/shopping-trip?from=...` | Start shopping that week's list; a trip already going is kept |
