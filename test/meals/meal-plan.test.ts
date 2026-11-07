@@ -11,7 +11,18 @@ describe("meal plan", () => {
     ["2 Dosen Tomaten", { quantity: 2, unit: "dosen", name: "Tomaten" }],
     ["Salt", { quantity: null, unit: null, name: "Salt" }],
     ["g strings", { quantity: null, unit: null, name: "g strings" }],
-    ["  3   cloves  garlic ", { quantity: 3, unit: null, name: "cloves garlic" }],
+    ["  3   cloves  garlic ", { quantity: 3, unit: "cloves", name: "garlic" }],
+    ["1½ dl Milch", { quantity: 1.5, unit: "dl", name: "Milch" }],
+    ["1 ½ tsp flour", { quantity: 1.5, unit: "tsp", name: "flour" }],
+    ["2 1/2 cups broth", { quantity: 2.5, unit: "cups", name: "broth" }],
+    ["1⁄2 lemon", { quantity: 0.5, unit: null, name: "lemon" }],
+    ["2 - 3 EL Zucker", { quantity: 3, unit: "el", name: "Zucker" }],
+    ["200g Mehl", { quantity: 200, unit: "g", name: "Mehl" }],
+    ["1 Zehe(n) Knoblauch", { quantity: 1, unit: "zehe", name: "Knoblauch" }],
+    ["1 Stk. Zwiebel", { quantity: 1, unit: "stk", name: "Zwiebel" }],
+    ["3 Eier", { quantity: 3, unit: null, name: "Eier" }],
+    ["½ TL Salz", { quantity: 0.5, unit: "tl", name: "Salz" }],
+    ["3Eier vom Hof", { quantity: null, unit: null, name: "3Eier vom Hof" }],
   ])("reads %j", (line, ingredient) => {
     expect(parseIngredient(line)).toEqual(ingredient);
   });

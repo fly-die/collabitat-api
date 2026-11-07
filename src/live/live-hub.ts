@@ -12,12 +12,13 @@ export type LiveTopic = (typeof LiveTopic)[keyof typeof LiveTopic];
 type Listener = (topic: LiveTopic) => void;
 
 const CHECKOUT_PATH = "/household/shopping-trip/checkout";
+export const RECIPE_IMPORT_PATH = "/household/recipe-import";
 
 // Which parts of the app a change belongs to, so screens only reload what changed.
 export function topicsOfPath(url: string): LiveTopic[] {
   const path = url.split("?")[0];
-  // A device turning notifications on or off changes nothing anyone else sees.
-  if (path.startsWith("/household/push-subscription")) {
+  // A device turning notifications on or off, or reading a recipe page, changes nothing anyone else sees.
+  if (path.startsWith("/household/push-subscription") || path === RECIPE_IMPORT_PATH) {
     return [];
   }
   if (path.startsWith("/household/expenses") || path.startsWith("/household/settlements")) {

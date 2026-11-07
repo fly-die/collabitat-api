@@ -10,6 +10,9 @@ export const MealErrorCode = {
   UnknownCook: "UNKNOWN_COOK",
   RecipeNotFound: "RECIPE_NOT_FOUND",
   InvalidMealTimes: "INVALID_MEAL_TIMES",
+  InvalidLink: "INVALID_LINK",
+  PageUnreachable: "PAGE_UNREACHABLE",
+  NoRecipeOnPage: "NO_RECIPE_ON_PAGE",
 } as const;
 
 export type MealErrorCode = (typeof MealErrorCode)[keyof typeof MealErrorCode];
@@ -35,6 +38,7 @@ const QUANTITY_PATTERN = /^(\d+(?:[.,]\d+)?|\d+\/\d+)$/;
 const UNITS = new Set([
   "g", "kg", "mg", "ml", "cl", "dl", "l", "tl", "el", "tsp", "tbsp", "cup", "cups",
   "pcs", "stk", "stück", "prise", "pinch", "bund", "dose", "dosen", "can", "cans", "pack", "packung", "zehe", "zehen",
+  "tablespoon", "tablespoons", "teaspoon", "teaspoons", "clove", "cloves", "oz", "ounce", "ounces", "lb", "lbs", "pound", "pounds",
 ]);
 
 export interface Ingredient {
@@ -125,10 +129,32 @@ export function ingredientLine({ quantity, unit, name }: Ingredient) {
   return [quantity, unit, name].filter((part) => part !== null).join(" ");
 }
 
+// Fractions as recipe sites write them: "1½ dl" is 1.5 dl.
+const UNICODE_FRACTIONS: Record<string, number> = { "½": 1 / 2, "⅓": 1 / 3, "⅔": 2 / 3, "¼": 1 / 4, "¾": 3 / 4, "⅛": 1 / 8 };
+const AMOUNT_DECIMALS_KEPT = 2;
+
+const keptDecimals = (amount: number) => String(Number(amount.toFixed(AMOUNT_DECIMALS_KEPT)));
+
+// Amounts as recipe sites write them, turned into what a person would type: "1½ dl" and "1 1/2 dl" are
+// "1.5 dl", "2 - 3 EL" is the larger "3 EL" (better too much on the list), and "200g Mehl" is "200 g Mehl".
+function spellOutAmount(line: string) {
+  return line
+    .replaceAll("⁄", "/")
+    .replace(/(\d*) ?([½⅓⅔¼¾⅛])/g, (_, whole: string, fraction: string) => keptDecimals(Number(whole || 0) + UNICODE_FRACTIONS[fraction]))
+    .replace(/^(\d+) (\d+)\/(\d+)(?=\s)/, (_, whole: string, numerator: string, denominator: string) =>
+      keptDecimals(Number(whole) + Number(numerator) / Number(denominator)),
+    )
+    .replace(/^\d+(?:[.,]\d+)? ?[-–] ?(\d+(?:[.,]\d+)?)(?=\s)/, "$1")
+    .replace(/^(\d+(?:[.,]\d+)?)(\p{L}+)(?=\s|$)/u, (glued, amount: string, word: string) =>
+      UNITS.has(word.toLocaleLowerCase("de-CH")) ? `${amount} ${word}` : glued,
+    );
+}
+
 export function parseIngredient(line: string): Ingredient {
-  const words = line.trim().replace(/\s+/g, " ").split(" ");
+  const words = spellOutAmount(line.trim().replace(/\s+/g, " ")).split(" ");
   const quantity = words.length > 1 && QUANTITY_PATTERN.test(words[0]) ? parseQuantity(words.shift() as string) : null;
-  const unitWord = words.length > 1 ? words[0].replace(/\.$/, "").toLocaleLowerCase("de-CH") : "";
+  // "Stk." and "Zehe(n)" are units too.
+  const unitWord = words.length > 1 ? words[0].replace(/\.$/, "").replace(/\((?:n|en|s)\)$/, "").toLocaleLowerCase("de-CH") : "";
   const unit = quantity !== null && UNITS.has(unitWord) ? (words.shift(), unitWord) : null;
   return { quantity, unit, name: words.join(" ") };
 }

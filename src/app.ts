@@ -29,6 +29,7 @@ import { LiveHub, topicsOfPath } from "./live/live-hub.js";
 import { liveRoutes } from "./live/live-routes.js";
 import { InMemoryMealRepository, type MealRepository } from "./meals/meal-repository.js";
 import { mealRoutes } from "./meals/meal-routes.js";
+import { fetchPublicPage, type FetchPage } from "./meals/page-fetcher.js";
 import { InMemoryShoppingItemRepository, type ShoppingItemRepository } from "./meals/shopping-item-repository.js";
 import { shoppingRoutes } from "./meals/shopping-routes.js";
 import { InMemoryShoppingTripRepository, type ShoppingTripRepository } from "./meals/shopping-trip-repository.js";
@@ -74,6 +75,8 @@ export interface AppDependencies {
   // Only the real server sends the morning chore reminders; tests call them directly.
   sendsChoreReminders?: boolean;
   webOrigins?: string[];
+  // Opens recipe pages for the import; tests pass their own pages.
+  fetchPage?: FetchPage;
 }
 
 const HTTP_ERROR_STATUS = 400;
@@ -97,6 +100,7 @@ export function buildApp({
   pushSender,
   sendsChoreReminders = false,
   webOrigins = [],
+  fetchPage = fetchPublicPage,
 }: AppDependencies = {}) {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
   const liveHub = new LiveHub();
@@ -167,7 +171,7 @@ export function buildApp({
     app.addHook("onClose", async () => stopReminders?.());
   }
   app.register(taskRoutes({ authenticate, taskRepository }));
-  app.register(mealRoutes({ authenticate, mealRepository }));
+  app.register(mealRoutes({ authenticate, mealRepository, fetchPage }));
   app.register(
     shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, expenseRepository, onExpenseAdded }),
   );

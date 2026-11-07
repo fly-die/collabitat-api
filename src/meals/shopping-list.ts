@@ -46,11 +46,14 @@ export function categorize(name: string, unit: string | null = null): GroceryCat
 const UNIT_SYNONYMS: Record<string, string | null> = {
   tsp: "tl", tbsp: "el", cups: "cup", stk: null, stück: null, pcs: null,
   dosen: "dose", can: "dose", cans: "dose", packung: "pack", zehen: "zehe",
+  tablespoon: "el", tablespoons: "el", teaspoon: "tl", teaspoons: "tl", cloves: "clove",
+  ounce: "oz", ounces: "oz", lbs: "lb", pound: "lb", pounds: "lb",
 };
 // Mass and volume add up across units: everything is counted in g or ml, then shown in the handiest unit.
 const BASE_UNITS: Record<string, { base: "g" | "ml"; factor: number }> = {
   mg: { base: "g", factor: 0.001 }, g: { base: "g", factor: 1 }, kg: { base: "g", factor: 1000 },
   ml: { base: "ml", factor: 1 }, cl: { base: "ml", factor: 10 }, dl: { base: "ml", factor: 100 }, l: { base: "ml", factor: 1000 },
+  oz: { base: "g", factor: 28.35 }, lb: { base: "g", factor: 453.59 },
 };
 const GRAMS_PER_KILO = 1000;
 const MILLILITRES_PER_LITRE = 1000;
@@ -60,6 +63,7 @@ const MILLILITRES_PER_DECILITRE = 100;
 const UNIT_LABELS: Record<string, [string, string]> = {
   dose: ["Dose", "Dosen"], zehe: ["Zehe", "Zehen"], pack: ["Pack", "Packs"], prise: ["Prise", "Prisen"],
   bund: ["Bund", "Bund"], tl: ["TL", "TL"], el: ["EL", "EL"], cup: ["cup", "cups"], pinch: ["pinch", "pinches"],
+  clove: ["clove", "cloves"],
 };
 // Plural endings in German and English: "Zwiebel" and "Zwiebeln", "onion" and "onions" are one item.
 const PLURAL_ENDINGS = ["n", "en", "e", "s", "es"];

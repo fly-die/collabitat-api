@@ -50,6 +50,9 @@ const STATUS_BY_MEAL_ERROR: Record<MealErrorCode, number> = {
   [MealErrorCode.UnknownCook]: HttpStatus.BadRequest,
   [MealErrorCode.RecipeNotFound]: HttpStatus.NotFound,
   [MealErrorCode.InvalidMealTimes]: HttpStatus.BadRequest,
+  [MealErrorCode.InvalidLink]: HttpStatus.BadRequest,
+  [MealErrorCode.PageUnreachable]: HttpStatus.UnprocessableContent,
+  [MealErrorCode.NoRecipeOnPage]: HttpStatus.UnprocessableContent,
 };
 
 const STATUS_BY_NOTIFICATION_ERROR: Record<NotificationErrorCode, number> = {
