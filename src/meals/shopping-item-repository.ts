@@ -35,7 +35,7 @@ export class PostgresShoppingItemRepository implements ShoppingItemRepository {
 
   async list(householdId: string) {
     const rows = await this.database
-      .select({ id: shoppingItems.id, line: shoppingItems.line, createdAt: shoppingItems.createdAt })
+      .select({ id: shoppingItems.id, line: shoppingItems.line, createdAt: shoppingItems.createdAt, recipeTitle: shoppingItems.recipeTitle })
       .from(shoppingItems)
       .where(eq(shoppingItems.householdId, householdId))
       .orderBy(asc(shoppingItems.createdAt));

@@ -31,7 +31,7 @@ describe("shopping list", () => {
     const lasagne = createRecipe({ title: "Lasagne", servings: 4, ingredientLines: ["1 kg Pasta", "500 ml rahm", "salt", "1 can tomaten"] });
     const meals = [dinner("2026-11-02", "Pasta", pasta.id), dinner("2026-11-03", "Lasagne", lasagne.id), dinner("2026-11-04", "Leftovers", null)];
 
-    const list = buildShoppingList(meals, [pasta, lasagne], [{ id: "extra-1", line: "2 l Milch", createdAt: "2026-11-01T10:00:00Z" }]);
+    const list = buildShoppingList(meals, [pasta, lasagne], [{ id: "extra-1", line: "2 l Milch", createdAt: "2026-11-01T10:00:00Z", recipeTitle: null }]);
 
     expect(list.map(({ name, quantity, unit, category, forDinners, extraId }) => [name, quantity, unit, category, forDinners, extraId])).toEqual([
       ["Milch", 2, "l", "dairy", [], "extra-1"],
@@ -83,7 +83,7 @@ describe("shopping list", () => {
   it("keeps an item ticked while more dinners add to it", () => {
     const pasta = createRecipe({ title: "Pasta", servings: 4, ingredientLines: ["500 g pasta", "1 Zwiebel"] });
     const lasagne = createRecipe({ title: "Lasagne", servings: 4, ingredientLines: ["1 kg Pasta", "2 Zwiebeln"] });
-    const extras = [{ id: "extra-1", line: "Zopf", createdAt: "2026-11-01T10:00:00Z" }];
+    const extras = [{ id: "extra-1", line: "Zopf", createdAt: "2026-11-01T10:00:00Z", recipeTitle: null }];
     const monday = buildShoppingList([dinner("2026-11-02", "Pasta", pasta.id)], [pasta], extras);
     const ticked = monday.filter((item) => item.name !== "Zwiebel").map((item) => item.key);
 

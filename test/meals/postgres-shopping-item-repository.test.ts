@@ -24,8 +24,8 @@ describe.runIf(databaseUrl)("Postgres shopping items", () => {
     const other = createHousehold("Seefeld 3", "Lea").household;
     await households.save(household);
     await households.save(other);
-    const milk = { id: crypto.randomUUID(), line: "2 l Milch", createdAt: "2026-11-01T10:00:00.000Z" };
-    const bread = { id: crypto.randomUUID(), line: "Zopf", createdAt: "2026-11-01T11:00:00.000Z" };
+    const milk = { id: crypto.randomUUID(), line: "2 l Milch", createdAt: "2026-11-01T10:00:00.000Z", recipeTitle: null };
+    const bread = { id: crypto.randomUUID(), line: "Zopf", createdAt: "2026-11-01T11:00:00.000Z", recipeTitle: "Brunch" };
 
     await items.add(household.id, bread);
     await items.add(household.id, milk);

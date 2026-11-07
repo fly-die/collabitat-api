@@ -92,7 +92,7 @@ export interface ShoppingItem {
   quantity: number | null;
   unit: string | null;
   category: GroceryCategory;
-  // The dinners that need it; empty for an item someone added by hand.
+  // The meals that need it, or the recipe an item added by hand came from; empty for one typed by hand.
   forDinners: string[];
   // Set for items added by hand, so they can be removed again.
   extraId: string | null;
@@ -105,6 +105,8 @@ export interface ExtraItem {
   id: string;
   line: string;
   createdAt: string;
+  // Set when the item came from putting a recipe on the list.
+  recipeTitle: string | null;
 }
 
 interface Need {
@@ -185,7 +187,16 @@ export function buildShoppingList(meals: PlannedMeal[], recipes: Recipe[], extra
     const ingredient = parseIngredient(extra.line);
     const unit = canonicalUnit(ingredient.unit);
     const key = extraItemKey(extra.id);
-    return { ...ingredient, unit, category: categorize(ingredient.name, unit), forDinners: [], extraId: extra.id, key, checked: checked.has(key) };
+    return {
+      name: ingredient.name,
+      quantity: ingredient.quantity,
+      unit: unitLabel(unit, ingredient.quantity),
+      category: categorize(ingredient.name, unit),
+      forDinners: extra.recipeTitle ? [extra.recipeTitle] : [],
+      extraId: extra.id,
+      key,
+      checked: checked.has(key),
+    };
   });
   return [...fromDinners, ...addedByHand].sort(byShopOrder);
 }

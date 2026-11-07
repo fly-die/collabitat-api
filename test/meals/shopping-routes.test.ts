@@ -53,18 +53,19 @@ describe("shopping routes", () => {
     expect((await call("GET", `/household/shopping-list?${WEEK}`, undefined, other)).json()).toEqual({ from: "2026-11-02", trip: null, items: [] });
   });
 
-  it("puts a recipe's ingredients on the list without planning it, and refuses one that is gone", async () => {
+  it("puts a recipe's ingredients on the list without planning it, says which recipe, and refuses one that is gone", async () => {
     const [curry] = (await call("POST", `/household/recipes?${WEEK}`, { title: "Curry", servings: 4, ingredientLines: ["1 Dose Kokosmilch", "0.5 kg Reis", "Koriander"] })).json().recipes;
 
     const added = await call("POST", `/household/shopping-list/recipes/${curry.id}?${WEEK}`);
 
     expect(added.statusCode).toBe(HttpStatus.Created);
     expect(added.json().addedItemIds).toHaveLength(3);
-    expect(added.json().items.map(({ name, quantity, unit, extraId }: { name: string; quantity: number; unit: string; extraId: string }) => [name, quantity, unit, added.json().addedItemIds.includes(extraId)])).toEqual(
+    type Item = { name: string; quantity: number; unit: string; extraId: string; forDinners: string[] };
+    expect(added.json().items.map(({ name, quantity, unit, extraId, forDinners }: Item) => [name, quantity, unit, added.json().addedItemIds.includes(extraId), forDinners])).toEqual(
       expect.arrayContaining([
-        ["Kokosmilch", 1, "dose", true],
-        ["Reis", 0.5, "kg", true],
-        ["Koriander", null, null, true],
+        ["Kokosmilch", 1, "Dose", true, ["Curry"]],
+        ["Reis", 0.5, "kg", true, ["Curry"]],
+        ["Koriander", null, null, true, ["Curry"]],
       ]),
     );
     await call("DELETE", `/household/recipes/${curry.id}?${WEEK}`);

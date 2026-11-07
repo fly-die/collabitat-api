@@ -84,7 +84,7 @@ export function shoppingRoutes({
         if (line.length === 0 || line.length > MAX_INGREDIENT_LENGTH) {
           throw new MealError(MealErrorCode.InvalidIngredients, `Write the item in 1 to ${MAX_INGREDIENT_LENGTH} characters.`);
         }
-        await shoppingItemRepository.add(household.id, { id: randomUUID(), line, createdAt: new Date().toISOString() });
+        await shoppingItemRepository.add(household.id, { id: randomUUID(), line, createdAt: new Date().toISOString(), recipeTitle: null });
         return reply.status(HttpStatus.Created).send(await listView(household.id, request.query.from));
       },
     );
@@ -107,6 +107,7 @@ export function shoppingRoutes({
           line: ingredientLine(ingredient),
           // Apart by a millisecond each, so they keep the recipe's order.
           createdAt: new Date(now + index).toISOString(),
+          recipeTitle: recipe.title,
         }));
         await Promise.all(items.map((item) => shoppingItemRepository.add(household.id, item)));
         const view = await listView(household.id, request.query.from);

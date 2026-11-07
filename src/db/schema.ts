@@ -247,6 +247,8 @@ export const shoppingItems = pgTable(
       .references(() => households.id, { onDelete: "cascade" }),
     line: text("line").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    // The recipe the item came from, if it was put on the list with one.
+    recipeTitle: text("recipe_title"),
   },
   (table) => [index("shopping_items_household_id_idx").on(table.householdId)],
 );
