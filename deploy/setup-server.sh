@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# One-time setup of a fresh Ubuntu 24.04 server. Run as root:
-#   ssh root@<host> 'bash -s' -- "<deploy public key>" < deploy/setup-server.sh
+# One-time setup of a fresh Ubuntu 24.04 server. Run as root, or with sudo:
+#   ssh <user>@<host> 'sudo bash -s' -- "<deploy public key>" < deploy/setup-server.sh
 set -euo pipefail
 
 DEPLOY_USER=deploy
