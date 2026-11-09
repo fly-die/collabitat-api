@@ -32,14 +32,32 @@ Set `DATABASE_URL` to use Postgres instead. Migrations run on startup.
 
 The API listens on `http://localhost:3000`. Check it with `curl localhost:3000/health`.
 
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT`, `HOST` | `3000`, `0.0.0.0` | Where the API listens |
+| `DATABASE_URL` | none (in memory) | Postgres connection string |
+| `WEB_ORIGINS` | `http://localhost:5173` | Comma-separated web origins allowed by CORS |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | none (notifications off) | Push notifications; create them with `npx web-push generate-vapid-keys` |
+| `VAPID_SUBJECT` | the live web app URL | Contact address push services see |
+
+## Test
+
+```sh
+npm test
+```
+
+Postgres repository tests run only when `TEST_DATABASE_URL` points to an empty test database, as in CI.
+
 ## Deploy
 
 Runs on any Ubuntu 24.04 server: Postgres, the API and [Caddy](https://caddyserver.com) for HTTPS, defined in `deploy/`.
 
-1. Prepare the server once, with the public half of a deploy key:
+1. Prepare the server once, with the public half of a deploy key (as root, or as a user with sudo):
 
    ```sh
-   ssh root@<host> 'bash -s' -- "$(cat deploy_key.pub)" < deploy/setup-server.sh
+   ssh <user>@<host> 'sudo bash -s' -- "$(cat deploy_key.pub)" < deploy/setup-server.sh
    ```
 
 2. In the repository settings under Actions, set:
@@ -137,7 +155,3 @@ Fastify, TypeScript, PostgreSQL, Drizzle, Vitest.
 ## License
 
 [MIT](LICENSE). Logo uses the "cottage" icon from [Material Symbols](https://github.com/google/material-design-icons) (Apache 2.0).
-
-## Notifications
-
-Set `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (create them with `npx web-push generate-vapid-keys`) to send notifications: a morning reminder when a chore is your turn, and a note when a flatmate adds an expense you share. Without them, notifications are off.
