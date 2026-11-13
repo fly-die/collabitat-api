@@ -11,6 +11,7 @@ import {
   PostgresReminderLog,
 } from "./notifications/postgres-push-subscription-repository.js";
 import { connectDatabase } from "./db/database.js";
+import { PostgresNotificationPreferenceRepository } from "./notifications/notification-preferences.js";
 import { PostgresAccountRepository } from "./accounts/postgres-account-repository.js";
 import { PostgresSettlementRepository } from "./expenses/postgres-settlement-repository.js";
 import { PostgresExpenseRepository } from "./expenses/postgres-expense-repository.js";
@@ -35,6 +36,7 @@ const app = buildApp({
   noteRepository: database ? new PostgresNoteRepository(database.database) : undefined,
   pushSubscriptionRepository: database ? new PostgresPushSubscriptionRepository(database.database) : undefined,
   reminderLog: database ? new PostgresReminderLog(database.database) : undefined,
+  notificationPreferenceRepository: database ? new PostgresNotificationPreferenceRepository(database.database) : undefined,
   pushSender: config.vapidKeys ? new WebPushSender(config.vapidKeys) : undefined,
   sendsChoreReminders: true,
   webOrigins: config.webOrigins,

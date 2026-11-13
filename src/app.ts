@@ -40,7 +40,13 @@ import { noteRoutes } from "./notes/note-routes.js";
 import { startChoreReminders } from "./notifications/chore-reminders.js";
 import { expenseAddedMessages } from "./notifications/expense-notifications.js";
 import { notificationRoutes } from "./notifications/notification-routes.js";
+import type { Household } from "./households/household.js";
+import {
+  InMemoryNotificationPreferenceRepository,
+  type NotificationPreferenceRepository,
+} from "./notifications/notification-preferences.js";
 import { createNotifier } from "./notifications/notifier.js";
+import { shoppingStartedMessage } from "./notifications/shopping-notifications.js";
 import type { PushSender } from "./notifications/push-sender.js";
 import {
   InMemoryPushSubscriptionRepository,
@@ -69,6 +75,7 @@ export interface AppDependencies {
   calendarRepository?: CalendarRepository;
   noteRepository?: NoteRepository;
   pushSubscriptionRepository?: PushSubscriptionRepository;
+  notificationPreferenceRepository?: NotificationPreferenceRepository;
   reminderLog?: ReminderLog;
   // Without one, notifications are off: the switch says so and nothing is sent.
   pushSender?: PushSender;
@@ -96,6 +103,7 @@ export function buildApp({
   calendarRepository = new InMemoryCalendarRepository(),
   noteRepository = new InMemoryNoteRepository(),
   pushSubscriptionRepository = new InMemoryPushSubscriptionRepository(),
+  notificationPreferenceRepository = new InMemoryNotificationPreferenceRepository(),
   reminderLog = new InMemoryReminderLog(),
   pushSender,
   sendsChoreReminders = false,
@@ -150,15 +158,20 @@ export function buildApp({
   app.register(
     accountRoutes({ authenticate, accounts, accountRepository, householdRepository, sessionRepository, views }),
   );
-  const notify = createNotifier(pushSubscriptionRepository, pushSender, app.log);
+  const notify = createNotifier(pushSubscriptionRepository, notificationPreferenceRepository, pushSender, app.log);
   const onExpenseAdded: ExpenseAddedListener = (household, expense, addedByMemberId) => {
     for (const { memberId, message } of expenseAddedMessages(household, expense, addedByMemberId)) {
-      void notify([memberId], message);
+      void notify([memberId], message, "money");
     }
   };
   app.register(expenseRoutes({ authenticate, expenseRepository, settlementRepository, onExpenseAdded }));
   app.register(
-    notificationRoutes({ authenticate, subscriptions: pushSubscriptionRepository, publicKey: pushSender?.publicKey }),
+    notificationRoutes({
+      authenticate,
+      subscriptions: pushSubscriptionRepository,
+      preferences: notificationPreferenceRepository,
+      publicKey: pushSender?.publicKey,
+    }),
   );
   if (sendsChoreReminders && pushSender) {
     let stopReminders: (() => void) | undefined;
@@ -170,10 +183,14 @@ export function buildApp({
     });
     app.addHook("onClose", async () => stopReminders?.());
   }
+  const onTripStarted = (household: Household, shopperMemberId: string) => {
+    const { memberIds, message } = shoppingStartedMessage(household, shopperMemberId);
+    void notify(memberIds, message, "shopping");
+  };
   app.register(taskRoutes({ authenticate, taskRepository }));
   app.register(mealRoutes({ authenticate, mealRepository, fetchPage }));
   app.register(
-    shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, expenseRepository, onExpenseAdded }),
+    shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, onTripStarted, expenseRepository, onExpenseAdded }),
   );
   app.register(calendarRoutes({ authenticate, calendarRepository }));
   app.register(noteRoutes({ authenticate, noteRepository }));

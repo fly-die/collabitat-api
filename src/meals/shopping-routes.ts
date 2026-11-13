@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { ExpenseRepository } from "../expenses/expense-repository.js";
 import { newExpenseBodySchema, type ExpenseAddedListener } from "../expenses/expense-routes.js";
 import { createExpense, type NewExpense } from "../expenses/expense.js";
+import type { Household } from "../households/household.js";
 import { HttpStatus } from "../http-status.js";
 import type { Authenticate } from "../sessions/authenticate.js";
 import { MAX_INGREDIENT_LENGTH, MealError, MealErrorCode, ingredientLine, scaleIngredients, validateDate, validateServings } from "./meal-plan.js";
@@ -44,6 +45,8 @@ interface ShoppingRouteDependencies {
   mealRepository: MealRepository;
   shoppingItemRepository: ShoppingItemRepository;
   shoppingTripRepository: ShoppingTripRepository;
+  // Called once a trip has started, so the flatmates can hear about it.
+  onTripStarted?: (household: Household, shopperMemberId: string) => void;
   expenseRepository: ExpenseRepository;
   onExpenseAdded?: ExpenseAddedListener;
 }
@@ -53,6 +56,7 @@ export function shoppingRoutes({
   mealRepository,
   shoppingItemRepository,
   shoppingTripRepository,
+  onTripStarted,
   expenseRepository,
   onExpenseAdded,
 }: ShoppingRouteDependencies) {
@@ -151,6 +155,7 @@ export function shoppingRoutes({
         from: request.query.from,
         startedAt: new Date().toISOString(),
       });
+      onTripStarted?.(household, currentMemberId);
       return reply.status(HttpStatus.Created).send(await listView(household.id, request.query.from));
     });
 

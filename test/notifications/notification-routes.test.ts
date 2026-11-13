@@ -3,6 +3,7 @@ import { buildApp } from "../../src/app.js";
 import { HttpStatus } from "../../src/http-status.js";
 import type { PushMessage, PushResult, PushSender } from "../../src/notifications/push-sender.js";
 import { NotificationErrorCode, type PushSubscription } from "../../src/notifications/push-subscription.js";
+import { InMemoryNotificationPreferenceRepository } from "../../src/notifications/notification-preferences.js";
 import { InMemoryPushSubscriptionRepository } from "../../src/notifications/push-subscription-repository.js";
 import { newCredentials } from "../support/credentials.js";
 
@@ -132,5 +133,59 @@ describe("notification routes", () => {
     });
 
     await vi.waitFor(async () => expect(await subscriptions.listAll()).toEqual([]));
+  });
+
+  it("lets a member switch kinds off for themselves, and refuses half an answer", async () => {
+    app = buildApp();
+    const { token } = await householdWithLea(app);
+    const url = "/household/notification-preferences";
+
+    const before = await app.inject({ url, headers: authorized(token) });
+    const saved = await app.inject({ method: "PUT", url, headers: authorized(token), payload: { chores: true, money: false, shopping: true } });
+    const partial = await app.inject({ method: "PUT", url, headers: authorized(token), payload: { money: false } });
+    const after = await app.inject({ url, headers: authorized(token) });
+
+    expect(before.json()).toEqual({ chores: true, money: true, shopping: true });
+    expect(saved.json()).toEqual({ chores: true, money: false, shopping: true });
+    expect(partial.statusCode).toBe(HttpStatus.BadRequest);
+    expect(after.json()).toEqual({ chores: true, money: false, shopping: true });
+  });
+
+  it("stays quiet about an expense for a flatmate who switched money off", async () => {
+    const { sender, sent } = fakeSender();
+    const subscriptions = new InMemoryPushSubscriptionRepository();
+    const preferences = new InMemoryNotificationPreferenceRepository();
+    app = buildApp({ pushSender: sender, pushSubscriptionRepository: subscriptions, notificationPreferenceRepository: preferences });
+    const { token, mia, lea } = await householdWithLea(app);
+    await subscriptions.save(lea.id, device("lea"));
+    await preferences.save(lea.id, { chores: true, money: false, shopping: true });
+
+    await app.inject({
+      method: "POST",
+      url: "/household/expenses",
+      headers: authorized(token),
+      payload: { description: "Groceries", amountCents: 3000, paidByMemberId: mia.id, splitBetweenMemberIds: [mia.id, lea.id], spentOn: "2026-11-04" },
+    });
+    await app.inject({ method: "POST", url: "/household/shopping-trip?from=2026-11-09", headers: authorized(token) });
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].message.title).toBe("Mia is shopping");
+  });
+
+  it("tells the flatmates when someone starts shopping, but not the shopper", async () => {
+    const { sender, sent } = fakeSender();
+    const subscriptions = new InMemoryPushSubscriptionRepository();
+    app = buildApp({ pushSender: sender, pushSubscriptionRepository: subscriptions });
+    const { token, mia, lea } = await householdWithLea(app);
+    await subscriptions.save(mia.id, device("mia"));
+    await subscriptions.save(lea.id, device("lea"));
+
+    await app.inject({ method: "POST", url: "/household/shopping-trip?from=2026-11-09", headers: authorized(token) });
+
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      endpoint: device("lea").endpoint,
+      message: { title: "Mia is shopping", body: "Add what you need to the list now.", tag: expect.stringMatching(/^shopping-/) },
+    });
   });
 });

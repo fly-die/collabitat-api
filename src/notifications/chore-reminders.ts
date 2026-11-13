@@ -71,7 +71,7 @@ export async function sendChoreReminders(dependencies: ChoreReminderDependencies
       .filter((task) => nextDueOn(task) <= day && turnOf(task, currentMemberIds) === memberId)
       .map((task) => task.title);
     if (myTurns.length > 0 && (await dependencies.reminderLog.claim(memberId, day))) {
-      await dependencies.notify([memberId], choreReminder(myTurns, day));
+      await dependencies.notify([memberId], choreReminder(myTurns, day), "chores");
     }
   }
 }

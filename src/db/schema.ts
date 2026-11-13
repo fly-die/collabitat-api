@@ -178,6 +178,18 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// The kinds of notifications a member switched off; no row means the kind is on.
+export const notificationMutes = pgTable(
+  "notification_mutes",
+  {
+    memberId: uuid("member_id")
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    topic: text("topic").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.memberId, table.topic] })],
+);
+
 // Who already got the chore reminder on which day, so it goes out once even across restarts.
 export const choreRemindersSent = pgTable(
   "chore_reminders_sent",

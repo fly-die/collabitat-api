@@ -7,9 +7,15 @@ import {
   validatePushSubscription,
   type PushSubscription,
 } from "./push-subscription.js";
+import {
+  NOTIFICATION_TOPICS,
+  type NotificationPreferenceRepository,
+  type NotificationPreferences,
+} from "./notification-preferences.js";
 import type { PushSubscriptionRepository } from "./push-subscription-repository.js";
 
 export const PUSH_SUBSCRIPTION_PATH = "/household/push-subscription";
+const PREFERENCES_PATH = "/household/notification-preferences";
 const MAX_ENDPOINT_LENGTH = 2048;
 const MAX_KEY_LENGTH = 256;
 
@@ -35,14 +41,21 @@ const endpointBodySchema = {
   properties: { endpoint: endpointProperty },
 } as const;
 
+const preferencesBodySchema = {
+  type: "object",
+  required: [...NOTIFICATION_TOPICS],
+  properties: Object.fromEntries(NOTIFICATION_TOPICS.map((topic) => [topic, { type: "boolean" }])),
+} as const;
+
 interface NotificationRouteDependencies {
   authenticate: Authenticate;
   subscriptions: PushSubscriptionRepository;
+  preferences: NotificationPreferenceRepository;
   // Undefined when the server has no push keys: notifications are then off for everyone.
   publicKey: string | undefined;
 }
 
-export function notificationRoutes({ authenticate, subscriptions, publicKey }: NotificationRouteDependencies) {
+export function notificationRoutes({ authenticate, subscriptions, preferences, publicKey }: NotificationRouteDependencies) {
   const requirePublicKey = () => {
     if (!publicKey) {
       throw new NotificationError(NotificationErrorCode.PushDisabled, "Notifications aren't set up on this server.");
@@ -62,6 +75,22 @@ export function notificationRoutes({ authenticate, subscriptions, publicKey }: N
         const { endpoint, keys } = validatePushSubscription(request.body);
         await subscriptions.save(currentMemberId, { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } });
         return reply.status(HttpStatus.NoContent).send();
+      },
+    );
+
+    app.get(PREFERENCES_PATH, async (request) => {
+      const { currentMemberId } = await authenticate(request);
+      return preferences.find(currentMemberId);
+    });
+
+    app.put<{ Body: NotificationPreferences }>(
+      PREFERENCES_PATH,
+      { schema: { body: preferencesBodySchema } },
+      async (request) => {
+        const { currentMemberId } = await authenticate(request);
+        const { chores, money, shopping } = request.body;
+        await preferences.save(currentMemberId, { chores, money, shopping });
+        return preferences.find(currentMemberId);
       },
     );
 
