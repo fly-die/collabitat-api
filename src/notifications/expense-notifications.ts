@@ -14,7 +14,7 @@ export function expenseAddedMessages(household: Household, expense: Expense, add
       memberId: share.memberId,
       message: {
         title: `${addedBy} added ${expense.description}`,
-        body: `Your share: ${amountFormat.format(share.amountCents / CENTS_PER_UNIT)}`,
+        body: `Your share: ${household.currency} ${amountFormat.format(share.amountCents / CENTS_PER_UNIT)}`,
         tag: `expense-${expense.id}`,
       } satisfies PushMessage,
     }));

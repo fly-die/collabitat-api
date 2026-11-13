@@ -12,9 +12,14 @@ export interface Member {
   hasJoined: boolean;
 }
 
+// What amounts are in. One per household, so everyone reads the same numbers the same way.
+export const SUPPORTED_CURRENCIES = ["CHF", "EUR", "USD", "GBP"] as const;
+export const DEFAULT_CURRENCY = "CHF";
+
 export interface Household {
   id: string;
   name: string;
+  currency: string;
   inviteCode: string;
   members: Member[];
 }
@@ -63,6 +68,7 @@ export function createHousehold(name: string, creatorName: string): HouseholdWit
   const household = {
     id: randomUUID(),
     name: normalizeName(name, "Household name"),
+    currency: DEFAULT_CURRENCY,
     inviteCode: randomBytes(INVITE_CODE_BYTES).toString("hex"),
     members: [],
   };

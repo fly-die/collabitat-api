@@ -1,0 +1,1 @@
+ALTER TABLE "households" ADD COLUMN "currency" text DEFAULT 'CHF' NOT NULL;

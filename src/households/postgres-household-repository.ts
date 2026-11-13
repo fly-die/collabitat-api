@@ -8,6 +8,7 @@ const householdColumns = {
   id: households.id,
   name: households.name,
   inviteCode: households.inviteCode,
+  currency: households.currency,
 };
 
 export class PostgresHouseholdRepository implements HouseholdRepository {
@@ -51,10 +52,10 @@ export class PostgresHouseholdRepository implements HouseholdRepository {
     await this.database.transaction(async (transaction) => {
       await transaction
         .insert(households)
-        .values({ id: household.id, name: household.name, inviteCode: household.inviteCode })
+        .values({ id: household.id, name: household.name, inviteCode: household.inviteCode, currency: household.currency })
         .onConflictDoUpdate({
           target: households.id,
-          set: { name: household.name, inviteCode: household.inviteCode },
+          set: { name: household.name, inviteCode: household.inviteCode, currency: household.currency },
         });
 
       const memberIds = household.members.map((member) => member.id);

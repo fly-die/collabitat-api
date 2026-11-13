@@ -15,6 +15,7 @@ import {
   joinAsExistingMember,
   joinAsNewMember,
   removeMember,
+  SUPPORTED_CURRENCIES,
   renameMember,
   type Household,
   type HouseholdWithMember,
@@ -69,6 +70,12 @@ export interface HouseholdRouteDependencies {
   settlementRepository: SettlementRepository;
   views: HouseholdViews;
 }
+
+const currencyBodySchema = {
+  type: "object",
+  required: ["currency"],
+  properties: { currency: { type: "string", enum: [...SUPPORTED_CURRENCIES] } },
+} as const;
 
 export function householdRoutes({
   authenticate,
@@ -170,6 +177,17 @@ export function householdRoutes({
         const updated = addMember(household, request.body.name);
         await householdRepository.save(updated);
         return reply.status(HttpStatus.Created).send(await views.viewFor(updated, currentMemberId));
+      },
+    );
+
+    app.put<{ Body: { currency: string } }>(
+      "/household/currency",
+      { schema: { body: currencyBodySchema } },
+      async (request) => {
+        const { household, currentMemberId } = await authenticate(request);
+        const updated = { ...household, currency: request.body.currency };
+        await householdRepository.save(updated);
+        return views.viewFor(updated, currentMemberId);
       },
     );
 

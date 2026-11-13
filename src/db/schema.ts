@@ -17,6 +17,7 @@ export const households = pgTable(
   {
     id: uuid("id").primaryKey(),
     name: text("name").notNull(),
+    currency: text("currency").notNull().default("CHF"),
     inviteCode: text("invite_code").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

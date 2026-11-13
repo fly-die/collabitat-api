@@ -113,7 +113,7 @@ describe("notification routes", () => {
     await vi.waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({
       endpoint: device("lea").endpoint,
-      message: { title: "Mia added Groceries", body: "Your share: 15.00", tag: expect.stringMatching(/^expense-/) },
+      message: { title: "Mia added Groceries", body: "Your share: CHF 15.00", tag: expect.stringMatching(/^expense-/) },
     });
   });
 

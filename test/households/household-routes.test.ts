@@ -209,3 +209,30 @@ describe("household routes", () => {
     expect(response.statusCode).toBe(HttpStatus.Unauthorized);
   });
 });
+
+describe("household currency", () => {
+  let app: App;
+
+  beforeEach(() => {
+    app = buildApp();
+  });
+  afterEach(() => app.close());
+
+  it("starts in CHF, changes for the whole household, and refuses a currency it doesn't know", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/households",
+      payload: { name: "Langstrasse 12", memberName: "Mia", ...newCredentials("mia-currency") },
+    });
+    const { token, household } = created.json() as { token: string; household: { currency: string } };
+
+    const changed = await app.inject({ method: "PUT", url: "/household/currency", headers: authorized(token), payload: { currency: "EUR" } });
+    const unknown = await app.inject({ method: "PUT", url: "/household/currency", headers: authorized(token), payload: { currency: "XYZ" } });
+    const reloaded = await app.inject({ url: "/household", headers: authorized(token) });
+
+    expect(household.currency).toBe("CHF");
+    expect(changed.json().currency).toBe("EUR");
+    expect(unknown.statusCode).toBe(HttpStatus.BadRequest);
+    expect(reloaded.json().currency).toBe("EUR");
+  });
+});
