@@ -5,6 +5,7 @@ import type { PushMessage, PushResult, PushSender } from "../../src/notification
 import { NotificationErrorCode, type PushSubscription } from "../../src/notifications/push-subscription.js";
 import { InMemoryNotificationPreferenceRepository } from "../../src/notifications/notification-preferences.js";
 import { InMemoryPushSubscriptionRepository } from "../../src/notifications/push-subscription-repository.js";
+import { TaskErrorCode } from "../../src/tasks/task-errors.js";
 import { newCredentials } from "../support/credentials.js";
 
 const device = (id: string): PushSubscription => ({
@@ -116,6 +117,39 @@ describe("notification routes", () => {
       endpoint: device("lea").endpoint,
       message: { title: "Mia added Groceries", body: "Your share: CHF 15.00", tag: expect.stringMatching(/^expense-/) },
     });
+  });
+
+  it("nudges whoever's turn a chore is, and refuses when it's my own turn", async () => {
+    const { sender, sent } = fakeSender();
+    const subscriptions = new InMemoryPushSubscriptionRepository();
+    app = buildApp({ pushSender: sender, pushSubscriptionRepository: subscriptions });
+    const { token, mia, lea } = await householdWithLea(app);
+    await subscriptions.save(mia.id, device("mia"));
+    await subscriptions.save(lea.id, device("lea"));
+    const addChore = async (title: string, rotationMemberIds: string[]) => {
+      const added = await app.inject({
+        method: "POST",
+        url: "/household/tasks",
+        headers: authorized(token),
+        payload: { title, every: 1, unit: "week", firstDueOn: "2026-11-02", rotationMemberIds },
+      });
+      return (added.json().tasks as { id: string; title: string }[]).find((task) => task.title === title)!.id;
+    };
+    const leasChore = await addChore("Clean the bathroom", [lea.id]);
+    const myChore = await addChore("Take out the trash", [mia.id]);
+    const nudge = (taskId: string) => app.inject({ method: "POST", url: `/household/tasks/${taskId}/nudges`, headers: authorized(token) });
+
+    const nudged = await nudge(leasChore);
+    const mine = await nudge(myChore);
+
+    expect(nudged.statusCode).toBe(HttpStatus.NoContent);
+    await vi.waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      endpoint: device("lea").endpoint,
+      message: { title: "Mia nudged you", body: "Clean the bathroom is your turn.", tag: `nudge-${leasChore}` },
+    });
+    expect(mine.statusCode).toBe(HttpStatus.Conflict);
+    expect(mine.json().error).toBe(TaskErrorCode.NoOneToNudge);
   });
 
   it("forgets a device the push service says is gone", async () => {

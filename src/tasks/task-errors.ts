@@ -5,6 +5,7 @@ export const TaskErrorCode = {
   InvalidRotation: "INVALID_ROTATION",
   TaskNotFound: "TASK_NOT_FOUND",
   CompletionNotFound: "COMPLETION_NOT_FOUND",
+  NoOneToNudge: "NO_ONE_TO_NUDGE",
 } as const;
 
 export type TaskErrorCode = (typeof TaskErrorCode)[keyof typeof TaskErrorCode];

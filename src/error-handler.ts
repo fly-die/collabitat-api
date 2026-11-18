@@ -67,6 +67,7 @@ const STATUS_BY_TASK_ERROR: Record<TaskErrorCode, number> = {
   [TaskErrorCode.InvalidRotation]: HttpStatus.BadRequest,
   [TaskErrorCode.TaskNotFound]: HttpStatus.NotFound,
   [TaskErrorCode.CompletionNotFound]: HttpStatus.NotFound,
+  [TaskErrorCode.NoOneToNudge]: HttpStatus.Conflict,
 };
 
 const STATUS_BY_CALENDAR_ERROR: Record<CalendarErrorCode, number> = {

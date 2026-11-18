@@ -45,6 +45,7 @@ import {
   InMemoryNotificationPreferenceRepository,
   type NotificationPreferenceRepository,
 } from "./notifications/notification-preferences.js";
+import { choreNudge } from "./notifications/chore-nudges.js";
 import { createNotifier } from "./notifications/notifier.js";
 import { shoppingStartedMessage } from "./notifications/shopping-notifications.js";
 import type { PushSender } from "./notifications/push-sender.js";
@@ -56,7 +57,7 @@ import {
 } from "./notifications/push-subscription-repository.js";
 import { createAuthenticator, createTokenAuthenticator, type Authenticate } from "./sessions/authenticate.js";
 import { InMemoryTaskRepository, type TaskRepository } from "./tasks/task-repository.js";
-import { taskRoutes } from "./tasks/task-routes.js";
+import { taskRoutes, type ChoreNudgedListener } from "./tasks/task-routes.js";
 import {
   InMemorySessionRepository,
   type SessionRepository,
@@ -187,7 +188,10 @@ export function buildApp({
     const { memberIds, message } = shoppingStartedMessage(household, shopperMemberId);
     void notify(memberIds, message, "shopping");
   };
-  app.register(taskRoutes({ authenticate, taskRepository }));
+  const onChoreNudged: ChoreNudgedListener = (household, task, turnMemberId, fromMemberId) => {
+    void notify([turnMemberId], choreNudge(household, task, fromMemberId), "chores");
+  };
+  app.register(taskRoutes({ authenticate, taskRepository, onChoreNudged }));
   app.register(mealRoutes({ authenticate, mealRepository, fetchPage }));
   app.register(
     shoppingRoutes({ authenticate, mealRepository, shoppingItemRepository, shoppingTripRepository, onTripStarted, expenseRepository, onExpenseAdded }),

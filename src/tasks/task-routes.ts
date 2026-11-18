@@ -18,6 +18,9 @@ import { TaskError, TaskErrorCode } from "./task-errors.js";
 import type { TaskRepository } from "./task-repository.js";
 
 const ISO_DATE_LENGTH = 10;
+// A reminder now and then is friendly; a stream of them is not.
+const NUDGES_PER_WINDOW = 5;
+const NUDGE_WINDOW = "10 minutes";
 
 const uuidProperty = { type: "string", format: "uuid" } as const;
 
@@ -61,9 +64,13 @@ interface CompletionParams extends TaskParams {
   completionId: string;
 }
 
+// Told when a member reminds whoever's turn it is; the app decides how that reaches them.
+export type ChoreNudgedListener = (household: Household, task: RecurringTask, turnMemberId: string, fromMemberId: string) => void;
+
 interface TaskRouteDependencies {
   authenticate: Authenticate;
   taskRepository: TaskRepository;
+  onChoreNudged?: ChoreNudgedListener;
 }
 
 function toTaskView(task: RecurringTask, currentMemberIds: string[]) {
@@ -81,7 +88,7 @@ function toTaskView(task: RecurringTask, currentMemberIds: string[]) {
   };
 }
 
-export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependencies) {
+export function taskRoutes({ authenticate, taskRepository, onChoreNudged }: TaskRouteDependencies) {
   // Soonest first; the same day is ordered by title so the list doesn't jump around.
   async function tasksView(household: Household) {
     const memberIds = household.members.map((member) => member.id);
@@ -147,6 +154,31 @@ export function taskRoutes({ authenticate, taskRepository }: TaskRouteDependenci
         const task = await findTask(household.id, request.params.taskId);
         await taskRepository.addCompletion(task.id, createCompletion(currentMemberId, request.body.doneOn));
         return reply.status(HttpStatus.Created).send(await tasksView(household));
+      },
+    );
+
+    app.post<{ Params: TaskParams }>(
+      "/household/tasks/:taskId/nudges",
+      {
+        schema: { params: taskParamsSchema },
+        config: {
+          rateLimit: {
+            max: NUDGES_PER_WINDOW,
+            timeWindow: NUDGE_WINDOW,
+            hook: "preHandler",
+            keyGenerator: (request) => request.headers.authorization ?? request.ip,
+          },
+        },
+      },
+      async (request, reply) => {
+        const { household, currentMemberId } = await authenticate(request);
+        const task = await findTask(household.id, request.params.taskId);
+        const turnMemberId = turnOf(task, household.members.map((member) => member.id));
+        if (!turnMemberId || turnMemberId === currentMemberId) {
+          throw new TaskError(TaskErrorCode.NoOneToNudge, "This chore isn't a flatmate's turn right now.");
+        }
+        onChoreNudged?.(household, task, turnMemberId, currentMemberId);
+        return reply.status(HttpStatus.NoContent).send();
       },
     );
 
